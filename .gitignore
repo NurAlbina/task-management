@@ -1,0 +1,10 @@
+# Node.js bağımlılıkları
+/backend/node_modules
+/frontend/node_modules
+
+# Gizli veriler ve ortam değişkenleri
+/backend/.env
+/frontend/.env
+
+# React build dosyası
+/frontend/build
