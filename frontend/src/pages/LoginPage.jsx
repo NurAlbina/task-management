@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import Lottie from "lottie-react";
+import loginAnimation from "../assets/pandaSleeping.json";
+import { Mail, Lock } from "lucide-react";
 
 const LoginPage = () => {
   // mail ve şifre için state değişkenleri
@@ -34,8 +37,11 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
+    <div       
+      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: "url('/minimal-hd-landscape_1920x1080.jpg')" }} 
+    >
+      <div className="bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
 
         {error && (
@@ -45,7 +51,7 @@ const LoginPage = () => {
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <div>
+          <div className="relative">
             <label className="block text-gray-300 mb-2">Email</label>
             <input
               type="email"
@@ -55,8 +61,9 @@ const LoginPage = () => {
               required
               disabled={loading}
             />
+            <Mail className="absolute right-3 top-1/2 transform text-gray-400" size={20} />
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-gray-300 mb-2">Password</label>
             <input
               type="password"
@@ -66,23 +73,29 @@ const LoginPage = () => {
               required
               disabled={loading}
             />
+            <Lock className="absolute right-3 top-1/2 transform text-gray-400" size={20} />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold py-2 rounded-lg transition duration-200"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <p className="text-gray-400 text-center mt-4">
+        <p className="text-gray-800 text-center mt-4">
           Don't have an account?{" "}
-          <Link to="/register" className="text-blue-400 hover:text-blue-300">
+          <Link to="/register" className="text-blue-200 hover:text-blue-300">
             Register
           </Link>
         </p>
       </div>
+      <Lottie
+        animationData={loginAnimation}
+        loop={true}
+        className="w-48 h-48 absolute bottom-4 right-4 opacity-90"
+      />
     </div>
   );
 };

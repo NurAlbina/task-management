@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Lottie from "lottie-react";
+import loginAnimation from "../assets/pandaSleeping.json";
+
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -34,8 +37,11 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: "url('/minimal-hd-landscape_1920x1080.jpg')" }} 
+    >
+      <div className="bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Register</h2>
         
         {error && (
@@ -81,19 +87,24 @@ const RegisterPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold py-2 rounded-lg transition duration-200"
           >
             {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
         
-        <p className="text-gray-400 text-center mt-4">
+        <p className="text-gray-800 text-center mt-4">
           Already have an account?{' '}
           <Link to="/login" className="text-blue-400 hover:text-blue-300">
             Login
           </Link>
         </p>
       </div>
+      <Lottie
+        animationData={loginAnimation}
+        loop={true}
+        className="w-48 h-48 absolute bottom-4 right-4 opacity-90"
+      />
     </div>
   );
 };
