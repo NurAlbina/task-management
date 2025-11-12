@@ -1,17 +1,15 @@
-// frontend/src/components/ProtectedRoute.jsx
 import { Navigate } from 'react-router-dom';
 
 function ProtectedRoute({ children }) {
-  // 1. Tarayıcı hafızasından 'token'ı kontrol et
+  // Tarayıcı hafızasından 'token'ı kontrol et
   const token = localStorage.getItem('token');
 
-  // 2. Eğer token VARSA:
+  // Eğer token varsa dashboard sayfasını veya children'ı göster
   if (token) {
-    return children; // Dashboard'u (veya children'ı) göster
+    return children;
   }
 
-  // 3. Eğer token YOKSA:
-  // Kullanıcıyı zorla /login sayfasına geri yönlendir
+  // Eğer token yoksa kullanıcıyı login sayfasına yönlendir
   return <Navigate to="/login" replace />;
 }
 

@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// --- Özel bir fonksiyon: JWT (Token) oluşturur ---
 // Kullanıcı ID'sini alır ve .env'deki gizli anahtarla imzalar
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -9,29 +8,28 @@ const generateToken = (id) => {
   });
 };
 
-
-// --- ARA SINAV MADDE #3: KULLANICI KAYDI ---
+// Kullanıcı kayıt işlemi
 exports.registerUser = async (req, res) => {
-  // 1. Kullanıcıdan bilgileri al
+  // Kullanıcıdan bilgileri al
   const { name, email, password } = req.body;
 
   try {
-    // 2. Kullanıcı veritabanında var mı diye kontrol et
+    // Kullanıcı veritabanında var mı diye kontrol et
     const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({ message: 'Bu e-posta adresi zaten kullanılıyor' });
     }
 
-    // 3. Yeni kullanıcıyı oluştur
-    // Not: Şifre, User.js'teki .pre('save') kancası sayesinde OTOMATİK olarak hash'lenecek!
+    // Yeni kullanıcıyı oluştur
+    // Şifre, User.js'teki .pre('save') kancası sayesinde otomatik olarak hash'lenir
     const user = await User.create({
       name,
       email,
       password,
     });
 
-    // 4. Kullanıcı başarıyla oluşturulduysa, ona bir token ver ve cevap döndür
+    // Kullanıcı başarıyla oluşturulduysa, ona bir token ver ve cevap döndür
     if (user) {
       res.status(201).json({
         _id: user._id,
@@ -48,19 +46,18 @@ exports.registerUser = async (req, res) => {
 };
 
 
-// --- ARA SINAV MADDE #4: GÜVENLİ KULLANICI GİRİŞİ ---
+// Kullanıcı giriş işlemi
 exports.loginUser = async (req, res) => {
-  // 1. E-posta ve şifreyi al
+  // E-posta ve şifreyi al
   const { email, password } = req.body;
 
   try {
-    // 2. Kullanıcıyı e-postaya göre bul
+    // Kullanıcıyı e-postaya göre bul
     const user = await User.findOne({ email });
 
-    // 3. (GÜVENLİ TEST 1): Kullanıcı yoksa VEYA
-    // 4. (GÜVENLİ TEST 2): Şifreler uyuşmuyorsa (User.js'te eklediğimiz fonksiyonu kullanıyoruz)
+    // Kullanıcı bulunduysa ve şifre eşleşiyorsa
     if (user && (await user.matchPassword(password))) {
-      // 5. Giriş başarılı: Token oluştur ve döndür
+      // Giriş başarılı: Token oluştur ve döndür
       res.json({
         _id: user._id,
         name: user.name,
@@ -68,7 +65,7 @@ exports.loginUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      // (GÜVENLİ TEST 1 ve 2'nin hata durumu)
+      // Hata durumu: Geçersiz e-posta veya şifre
       res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
     }
   } catch (error) {
