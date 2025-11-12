@@ -1,4 +1,3 @@
-// 1. Gerekli kütüphaneleri içeri aktar (import)
 const authRoutes = require('./routes/auth');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -7,10 +6,10 @@ const cors = require('cors');
 
 
 
-// 2. .env dosyasındaki gizli bilgilere erişmek için
+// .env dosyasındaki gizli bilgilere erişmek için
 dotenv.config();
 
-// 3. Veritabanına bağlanacak fonksiyon
+// Veritabanına bağlanacak fonksiyon
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
@@ -22,29 +21,27 @@ const connectDB = async () => {
   }
 };
 
-// 4. Veritabanına bağlanmayı dene
+// Veritabanına bağlanmayı dene
 connectDB();
 
-// 5. Express sunucusunu başlat
+// Express sunucusunu başlat
 const app = express();
 
-// 6. Gerekli ara yazılımları (middleware) kullan
-// Frontend'den (React) gelen isteklere izin ver
+// CORS ayarları, frontend'den gelen istekleri kabul et
 app.use(cors());
-// Gelen JSON formatındaki verileri (body) parse et
+// Gelen JSON formatındaki istekleri işleyebilmek için
 app.use(express.json());
 
-// 7. Test için bir ana rota (endpoint)
-// Tarayıcıda http://localhost:5000/ adresine girince görünecek
+// Test için bir endpoint (/localhost:5000/)
 app.get('/', (req, res) => {
   res.send('API çalışıyor...');
 });
-// --- API Rotaları ---
-// /api/auth ile başlayan TÜM istekleri 'authRoutes' dosyasına yönlendir
+
+// /api/auth ile başlayan tüm istekleri 'authRoutes' dosyasına yönlendir
 app.use('/api/auth', authRoutes);
 
 
-// 8. Sunucuyu dinlemeye başla
+// Sunucuyu dinlemeye başla
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda başarıyla başlatıldı.`);
