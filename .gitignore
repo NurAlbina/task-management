@@ -8,3 +8,6 @@
 
 # React build dosyası
 /frontend/build
+
+# Yapılacaklar listesi
+/todo.md

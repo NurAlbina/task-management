@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// Kullanıcı Veri Şablonu (Schema)
+// Kullanıcı Veri Şablonu
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,

@@ -1,4 +1,5 @@
 const authRoutes = require('./routes/auth');
+const taskRoutes = require('./routes/tasks'); 
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
@@ -39,6 +40,9 @@ app.get('/', (req, res) => {
 
 // /api/auth ile başlayan tüm istekleri 'authRoutes' dosyasına yönlendir
 app.use('/api/auth', authRoutes);
+
+// /api/tasks ile başlayan tüm istekleri 'taskRoutes' dosyasına yönlendir
+app.use('/api/tasks', taskRoutes);
 
 
 // Sunucuyu dinlemeye başla
