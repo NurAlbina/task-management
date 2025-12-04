@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Personal');
   const [dueDate, setDueDate] = useState('');
+  const [dateError, setDateError] = useState(''); // Tarih hatası için
   
   // Edit formu için state'ler
   const [editTitle, setEditTitle] = useState('');
@@ -57,9 +58,56 @@ const Dashboard = () => {
     }
   };
 
+  // Tarih validasyonu
+  const validateDate = (date) => {
+    if (!date) return true; // Tarih zorunlu değilse boş olabilir
+    
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Bugünün başlangıcı
+    
+    const minYear = today.getFullYear(); // Bu yıl
+    const maxYear = today.getFullYear() + 5; // 5 yıl sonrası max
+    
+    const selectedYear = selectedDate.getFullYear();
+    
+    // Geçmiş tarih kontrolü
+    if (selectedDate < today) {
+      return { valid: false, message: '❌ Geçmiş bir tarih seçemezsiniz' };
+    }
+    
+    // Çok eski yıl kontrolü (1992 gibi)
+    if (selectedYear < minYear) {
+      return { valid: false, message: '❌ Geçersiz yıl seçtiniz' };
+    }
+    
+    // Çok ileri yıl kontrolü (2050 gibi)
+    if (selectedYear > maxYear) {
+      return { valid: false, message: `❌ Tarih ${maxYear} yılından ileri olamaz` };
+    }
+    
+    return { valid: true, message: '' };
+  };
+
+  // Tarih değiştiğinde kontrol et
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    setDueDate(newDate);
+    
+    const validation = validateDate(newDate);
+    setDateError(validation.message);
+  };
+
   // Yeni görev ekle
   const handleAddTask = async (e) => {
     e.preventDefault();
+    
+    // Tarih kontrolü
+    const dateValidation = validateDate(dueDate);
+    if (!dateValidation.valid) {
+      setDateError(dateValidation.message);
+      return;
+    }
     
     try {
       const token = localStorage.getItem('token');
@@ -77,6 +125,7 @@ const Dashboard = () => {
       setDescription('');
       setCategory('Personal');
       setDueDate('');
+      setDateError(''); // Hata mesajını temizle
       setShowForm(false);
     } catch (error) {
       console.error('Görev eklenirken hata:', error);
@@ -285,9 +334,17 @@ const Dashboard = () => {
                 <input
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg"
+                  onChange={handleDateChange}
+                  min={new Date().toISOString().split('T')[0]} // Bugünden öncesi seçilemez
+                  max={`${new Date().getFullYear() + 5}-12-31`} // 5 yıl sonrasına kadar
+                  className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg ${
+                    dateError ? 'ring-2 ring-red-500' : ''
+                  }`}
                 />
+                {/* Tarih uyarısı */}
+                {dateError && (
+                  <p className="text-red-400 text-sm mt-1">{dateError}</p>
+                )}
               </div>
               
               {/* Submit butonu */}

@@ -14,11 +14,66 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Email validasyonu - sadece bilinen email sağlayıcıları kabul et
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    // Sadece bilinen/güvenilir email sağlayıcıları
+    const validDomains = [
+      'gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 
+      'icloud.com', 'protonmail.com', 'yandex.com', 'mail.com',
+      // Türk domainleri
+      'edu.tr', 'gov.tr', 'com.tr', 'org.tr',
+      // Üniversite domainleri (genel)
+      '.edu', '.ac.uk'
+    ];
+    
+    if (!emailRegex.test(email)) return false;
+    
+    const domain = email.split('@')[1]?.toLowerCase();
+    if (!domain) return false;
+    
+    // Domain bilinen listede mi veya .edu/.gov içeriyor mu kontrol et
+    const isValidDomain = validDomains.some(valid => 
+      domain === valid || domain.endsWith('.' + valid) || domain.endsWith(valid)
+    );
+    
+    return isValidDomain;
+  };
+
+  // Şifre güçlülük kontrolü
+  const checkPasswordStrength = (password) => {
+    return {
+      minLength: password.length >= 6,
+      hasUppercase: /[A-Z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+  };
+
+  // Şifre gereksinimlerini kontrol et
+  const passwordChecks = checkPasswordStrength(password);
+  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+  const isEmailValid = email === '' || validateEmail(email);
+
   // Kayıt formu submit edildiğinde çalışan fonksiyon
   const handleRegister = async (e) => {
-    e.preventDefault(); // Sayfanın yenilenmesini engeller
-    setError(''); // Önceki hataları temizle
-    setLoading(true); // Yükleme durumunu aktif et
+    e.preventDefault();
+    setError('');
+
+    // Email kontrolü
+    if (!validateEmail(email)) {
+      setError('Lütfen geçerli bir email adresi girin (örn: ad@gmail.com)');
+      return;
+    }
+
+    // Şifre kontrolü
+    if (!isPasswordValid) {
+      setError('Şifre tüm gereksinimleri karşılamıyor');
+      return;
+    }
+
+    setLoading(true);
     
     try {
       console.log('Attempting register with:', { name, email, password });
@@ -78,10 +133,18 @@ const RegisterPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 ${
+                email && !isEmailValid ? 'ring-2 ring-red-500' : 'focus:ring-blue-500'
+              }`}
               required
               disabled={loading} // Yükleme sırasında input'u deaktif et
             />
+            {/* Email uyarısı */}
+            {email && !isEmailValid && (
+              <p className="text-red-500 text-sm mt-1">
+                ⚠️ Geçerli bir email adresi girin (örn: ad@gmail.com)
+              </p>
+            )}
           </div>
           
           {/* Şifre input alanı */}
@@ -95,13 +158,34 @@ const RegisterPage = () => {
               required
               disabled={loading} // Yükleme sırasında input'u deaktif et
             />
+            
+            {/* Şifre gereksinimleri göstergesi */}
+            {password && (
+              <div className="mt-2 p-3 bg-gray-800/50 rounded-lg">
+                <p className="text-gray-300 text-sm mb-2">Şifre Gereksinimleri:</p>
+                <ul className="space-y-1 text-sm">
+                  <li className={passwordChecks.minLength ? 'text-green-400' : 'text-red-400'}>
+                    {passwordChecks.minLength ? '✅' : '❌'} En az 6 karakter
+                  </li>
+                  <li className={passwordChecks.hasUppercase ? 'text-green-400' : 'text-red-400'}>
+                    {passwordChecks.hasUppercase ? '✅' : '❌'} En az 1 büyük harf
+                  </li>
+                  <li className={passwordChecks.hasNumber ? 'text-green-400' : 'text-red-400'}>
+                    {passwordChecks.hasNumber ? '✅' : '❌'} En az 1 rakam
+                  </li>
+                  <li className={passwordChecks.hasSpecial ? 'text-green-400' : 'text-red-400'}>
+                    {passwordChecks.hasSpecial ? '✅' : '❌'} En az 1 özel karakter (!@#$%^&*)
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
           
           {/* Submit butonu */}
           <button
             type="submit"
-            disabled={loading} // Yükleme sırasında butonu deaktif et
-            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white font-semibold py-2 rounded-lg transition duration-200"
+            disabled={loading || !isPasswordValid || !isEmailValid} // Yükleme sırasında ve geçersiz input'larda butonu deaktif et
+            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition duration-200"
           >
             {loading ? 'Creating Account...' : 'Register'}
           </button>
