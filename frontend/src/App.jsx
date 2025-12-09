@@ -3,6 +3,8 @@ import LoginPage from "./pages/LoginPage"
 import RegisterPage from "./pages/RegisterPage"
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import DashboardPage from './pages/Dashboard.jsx';
+import TaskFormPage from './pages/TaskFormPage.jsx';
+import StatisticsPage from './pages/StatisticsPage.jsx';
 
 function App() {
 
@@ -25,6 +27,10 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
+        <Route path="/add-task" element={<TaskFormPage />} />
+        <Route path="/edit-task/:id" element={<ProtectedRoute><TaskFormPage /></ProtectedRoute>} />
+        <Route path="/statistics" element={<ProtectedRoute><StatisticsPage /></ProtectedRoute>} />
         
         {/* Ana sayfa, login sayfasına yönlendirir */}
         <Route path="/" element={<Navigate to="/login" replace/>}/>
