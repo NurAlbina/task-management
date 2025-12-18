@@ -13,4 +13,5 @@
 /todo.md
 
 # Yüklenen dosyalar
-/backend/uploads/
+/backend/uploads/*
+!/backend/uploads/.gitkeep
