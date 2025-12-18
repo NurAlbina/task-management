@@ -1,47 +1,45 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Token oluştur (login ve register'da kullanılır)
+// Token oluştur (Requirement 8.2: Rol bilgisini token'a dahil eder) 
 const generateToken = (user) => {
   return jwt.sign(
     { 
       id: user._id,
       name: user.name,
-      role: user.role  // KRİTİK: Rol bilgisini token'a ekledik 
+      role: user.role 
     }, 
     process.env.JWT_SECRET, 
     { expiresIn: '30d' }
   );
 };
 
-// Kullanıcı kayıt işlemi
+// Kullanıcı kayıt işlemi (Requirement 3 & 8.2) [cite: 23, 70]
 exports.registerUser = async (req, res) => {
-  // Kullanıcıdan bilgileri al
-  const { name, email, password } = req.body;
+  const { name, email, password, role } = req.body; // Rolü body'den alabiliriz (Test için kolaylık)
 
   try {
-    // Kullanıcı veritabanında var mı diye kontrol et
     const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({ message: 'Bu e-posta adresi zaten kullanılıyor' });
     }
 
-    // Yeni kullanıcıyı oluştur
-    // Şifre, User.js'teki .pre('save') kancası sayesinde otomatik olarak hash'lenir
+    // Yeni kullanıcıyı oluştur (Şifre User modelinde otomatik hashlenir) [cite: 20]
     const user = await User.create({
       name,
       email,
       password,
+      role: role || 'user' // Eğer rol belirtilmemişse varsayılan 'user' olur [cite: 72]
     });
 
-    // Kullanıcı başarıyla oluşturulduysa, ona bir token ver ve cevap döndür
     if (user) {
       res.status(201).json({
         _id: user._id,
         name: user.name,
         email: user.email,
-        token: generateToken(user), // Token oluşturuldu
+        role: user.role, // Frontend yönlendirmesi için kritik 
+        token: generateToken(user),
       });
     } else {
       res.status(400).json({ message: 'Geçersiz kullanıcı verisi' });
@@ -51,27 +49,23 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-
-// Kullanıcı giriş işlemi
+// Kullanıcı giriş işlemi (Requirement 3 & 4) [cite: 23, 87]
 exports.loginUser = async (req, res) => {
-  // E-posta ve şifreyi al
   const { email, password } = req.body;
 
   try {
-    // Kullanıcıyı e-postaya göre bul
     const user = await User.findOne({ email });
 
-    // Kullanıcı bulunduysa ve şifre eşleşiyorsa
+    // matchPassword metodu ile şifre kontrolü [cite: 20]
     if (user && (await user.matchPassword(password))) {
-      // Giriş başarılı: Token oluştur ve döndür
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role, // Frontend'deki navigate mantığı için gerekli 
         token: generateToken(user),
       });
     } else {
-      // Hata durumu: Geçersiz e-posta veya şifre
       res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
     }
   } catch (error) {

@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import DashboardPage from './pages/Dashboard.jsx';
 import TaskFormPage from './pages/TaskFormPage.jsx';
 import StatisticsPage from './pages/StatisticsPage.jsx';
-
+import AdminPanel from './pages/AdminPanel';
 function App() {
 
   return (
@@ -31,7 +31,7 @@ function App() {
         <Route path="/add-task" element={<TaskFormPage />} />
         <Route path="/edit-task/:id" element={<ProtectedRoute><TaskFormPage /></ProtectedRoute>} />
         <Route path="/statistics" element={<ProtectedRoute><StatisticsPage /></ProtectedRoute>} />
-        
+        <Route path="/admin-panel" element={<AdminPanel />} />
         {/* Ana sayfa, login sayfasına yönlendirir */}
         <Route path="/" element={<Navigate to="/login" replace/>}/>
       </Routes>

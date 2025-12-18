@@ -6,36 +6,40 @@ import loginAnimation from "../assets/pandaSleeping.json";
 import { Mail, Lock } from "lucide-react";
 
 const LoginPage = () => {
-  // Kullanıcı giriş bilgileri için state değişkenleri
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // Hata mesajlarını saklamak için
-  const [loading, setLoading] = useState(false); // Yükleme durumunu kontrol etmek için
-  const navigate = useNavigate(); // Sayfa yönlendirmesi için
+  const [error, setError] = useState(""); 
+  const [loading, setLoading] = useState(false); 
+  const navigate = useNavigate(); 
 
-  // Form submit edildiğinde çalışan fonksiyon
   const handleLogin = async (e) => {
-    e.preventDefault(); // Sayfanın yenilenmesini engeller
-    setError(""); // Önceki hataları temizle
-    setLoading(true); // Yükleme durumunu aktif et
+    e.preventDefault(); 
+    setError(""); 
+    setLoading(true); 
 
     try {
-      console.log("Attempting login with:", { email, password });
       // Backend'e login isteği gönder
       const response = await axios.post("/api/auth/login", { email, password });
-      console.log("Login successful:", response.data);
-
+      
       // Başarılı girişte JWT token'ı localStorage'a kaydet
       localStorage.setItem("token", response.data.token);
 
-      // Dashboard'a yönlendir
-      navigate("/dashboard");
+      // --- ROL BAZLI YÖNLENDİRME (Requirement 8.2) ---
+      // Backend'den dönen rol bilgisini kontrol ediyoruz [cite: 70, 78]
+      const userRole = response.data.role;
+
+      if (userRole === "admin") {
+        // Kullanıcı admin ise Admin Paneline yönlendir 
+        navigate("/admin-panel");
+      } else {
+        // Normal kullanıcı ise standart Dashboard'a yönlendir [cite: 72]
+        navigate("/dashboard");
+      }
+      
     } catch (error) {
-      console.error("Login failed:", error);
-      // Hata durumunda kullanıcıya mesaj göster
       setError(error.response?.data?.message || "Login failed");
     } finally {
-      setLoading(false); // Yükleme durumunu kapat
+      setLoading(false); 
     }
   };
 
@@ -44,20 +48,16 @@ const LoginPage = () => {
       className="min-h-screen flex items-center justify-center bg-cover bg-center bg-fixed"
       style={{ backgroundImage: "url('/minimal-hd-landscape_1920x1080.jpg')" }} 
     >
-      {/* Ana form container */}
       <div className="bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-2xl w-full max-w-md">
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Login</h2>
 
-        {/* Hata mesajı gösterme alanı */}
         {error && (
           <div className="bg-red-600 text-white p-3 rounded-lg mb-4 text-center">
             {error}
           </div>
         )}
 
-        {/* Login formu */}
         <form onSubmit={handleLogin} className="space-y-4">
-          {/* Email input alanı */}
           <div className="relative">
             <label className="block text-gray-300 mb-2">Email</label>
             <input
@@ -68,11 +68,9 @@ const LoginPage = () => {
               required
               disabled={loading}
             />
-            {/* Email ikonu */}
             <Mail className="absolute right-3 top-1/2 transform text-gray-400" size={20} />
           </div>
           
-          {/* Password input alanı */}
           <div className="relative">
             <label className="block text-gray-300 mb-2">Password</label>
             <input
@@ -83,11 +81,9 @@ const LoginPage = () => {
               required
               disabled={loading}
             />
-            {/* Şifre ikonu */}
             <Lock className="absolute right-3 top-1/2 transform text-gray-400" size={20} />
           </div>
           
-          {/* Submit butonu */}
           <button
             type="submit"
             disabled={loading}
@@ -97,16 +93,14 @@ const LoginPage = () => {
           </button>
         </form>
 
-        {/* Kayıt sayfasına yönlendirme linki */}
-        <p className="text-gray-800 text-center mt-4">
+        <p className="text-gray-200 text-center mt-4">
           Don't have an account?{" "}
-          <Link to="/register" className="text-blue-200 hover:text-blue-300">
+          <Link to="/register" className="text-blue-300 hover:text-blue-400 font-bold">
             Register
           </Link>
         </p>
       </div>
       
-      {/* Lottie animasyonu */}
       <Lottie
         animationData={loginAnimation}
         loop={true}
