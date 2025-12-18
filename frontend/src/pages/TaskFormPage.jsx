@@ -18,6 +18,11 @@ const TaskFormPage = () => {
   const [error, setError] = useState('');
   const [dateError, setDateError] = useState('');
 
+  // --- DOSYA YÖNETİMİ STATE'LERİ (Requirement 8.1) ---
+  const [selectedFiles, setSelectedFiles] = useState([]); // Yeni seçilen dosyalar
+  const [existingAttachments, setExistingAttachments] = useState([]); // Sunucudan gelen mevcut dosyalar
+  const [filesToDelete, setFilesToDelete] = useState([]); // Silinecek dosyaların listesi
+
   // Edit modunda mevcut görevi yükle
   useEffect(() => {
     if (isEditMode) {
@@ -40,6 +45,9 @@ const TaskFormPage = () => {
         setCategory(task.category);
         setDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
         setStatus(task.status);
+        
+        // Veritabanındaki dosyaları state'e alıyoruz
+        setExistingAttachments(task.attachments || []);
       }
     } catch (error) {
       console.error('Görev yüklenirken hata:', error);
@@ -86,7 +94,15 @@ const TaskFormPage = () => {
     setDateError(validation.message);
   };
 
-  // Form submit
+  // --- DOSYA SİLME FONKSİYONU ---
+  const handleRemoveExistingFile = (fileUrl) => {
+    // 1. Silinecek dosyanın yolunu listeye ekle (Backend bunu silecek)
+    setFilesToDelete(prev => [...prev, fileUrl]);
+    // 2. Ekranda görünen listeden hemen kaldır
+    setExistingAttachments(prev => prev.filter(att => att.fileUrl !== fileUrl));
+  };
+
+  // --- FORM SUBMIT (KAYDETME) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -102,24 +118,43 @@ const TaskFormPage = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const taskData = { title, description, category, dueDate, status };
+
+      // 1. JSON YERİNE FORMDATA OLUŞTURUYORUZ (Requirement 8.1)
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('dueDate', dueDate);
+      formData.append('status', status);
+
+      // 2. Silinecek dosyaları ekle
+      formData.append('deletedFiles', JSON.stringify(filesToDelete));
+
+      // 3. Yeni seçilen dosyaları tek tek ekle
+      selectedFiles.forEach((file) => {
+        formData.append('files', file); 
+      });
+
+      // 4. Axios Config (Multipart Header)
+      const config = {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data' 
+        }
+      };
 
       if (isEditMode) {
-        // Güncelle
-        await axios.put(`/api/tasks/${id}`, taskData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Güncelle (PUT)
+        await axios.put(`/api/tasks/${id}`, formData, config);
       } else {
-        // Yeni ekle
-        await axios.post('/api/tasks', taskData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Yeni ekle (POST)
+        await axios.post('/api/tasks', formData, config);
       }
 
       navigate('/dashboard');
     } catch (error) {
       console.error('Görev kaydedilirken hata:', error);
-      setError(isEditMode ? 'Görev güncellenemedi' : 'Görev eklenemedi');
+      setError(error.response?.data?.message || (isEditMode ? 'Görev güncellenemedi' : 'Görev eklenemedi'));
     } finally {
       setLoading(false);
     }
@@ -208,6 +243,69 @@ const TaskFormPage = () => {
                 </div>
               )}
             </div>
+
+            {/* --- DOSYA YÖNETİM ALANI BAŞLANGIÇ --- */}
+            
+            {/* 1. Mevcut Dosyalar Listesi (Sadece varsa göster) */}
+            {existingAttachments.length > 0 && (
+              <div className="space-y-2 border border-white/10 p-4 rounded-xl bg-black/10">
+                <label className="block text-teal-200/50 text-[10px] font-bold uppercase tracking-widest mb-2">
+                  Attached Files
+                </label>
+                {existingAttachments.map((file, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-red-500/30 transition-all">
+                    <div className="flex items-center gap-2">
+                      <span className="text-teal-400">📎</span>
+                      <span className="text-teal-100 text-xs truncate max-w-[200px]">{file.fileName}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExistingFile(file.fileUrl)}
+                      className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase px-2 py-1 bg-red-500/10 rounded-md transition-colors hover:bg-red-500/20"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 2. Yeni Dosya Yükleme Alanı */}
+            <div>
+              <label className="block text-teal-200/80 text-sm mb-2">
+                New Attachments (PDF, PNG, JPG, DOCX - Max 10MB)
+              </label>
+              <div className="relative group">
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl 
+                             focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/50 
+                             text-white transition-all cursor-pointer
+                             file:mr-4 file:py-2 file:px-4
+                             file:rounded-full file:border-0
+                             file:text-sm file:font-semibold
+                             file:bg-teal-500/20 file:text-teal-200
+                             hover:file:bg-teal-500/30"
+                />
+              </div>
+              
+              {/* Yeni Seçilen Dosyaların İsimleri */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="text-xs text-teal-400 flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                      <span>➕ {file.name}</span>
+                      <span className="text-teal-200/40 text-[10px]">
+                        ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* --- DOSYA YÖNETİM ALANI BİTİŞ --- */}
 
             {/* Bitiş tarihi */}
             <div>

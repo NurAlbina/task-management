@@ -8,6 +8,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Dosya ismini çakışmaması için: tarih + orijinal isim
+    const originalNameFixed = Buffer.from(file.originalname, 'latin1').toString('utf8');
     cb(null, `${Date.now()}-${file.originalname}`);
   }
 });

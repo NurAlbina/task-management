@@ -1,34 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware'); // Dosya yükleme middleware'i
+const { protect } = require('../middleware/authMiddleware'); // Yetkilendirme middleware'i
 const {
   getTasks,
   createTask,
   updateTask,
   deleteTask
 } = require('../controllers/taskController');
-const express = require('express');
-const upload = require('../middleware/uploadMiddleware'); // Yeni oluşturduğun middleware
-const { protect } = require('../middleware/authMiddleware');
-const { createTask, updateTask } = require('../controllers/taskController');
-// Tüm route'lar token gerektirir (protect middleware)
+
+// --- TÜM ROTLARI KORUMAYA AL (Requirement 8.2) ---
 router.use(protect);
 
-// Kullanıcının görevlerini listele
+// 1. Tüm görevleri getir
 router.get('/', getTasks);
 
-// Yeni görev ekle
-router.post('/', createTask);
+// 2. Yeni görev ekle (Requirement 8.1: Çoklu dosya desteği - max 5)
+// 'files' ismi frontend'deki FormData ile aynı olmalıdır.
+router.post('/', upload.array('files', 5), createTask);
 
-// Görevi güncelle
-router.put('/:id', updateTask);
+// 3. Görevi güncelle (Dosya ekleme desteği ile)
+router.put('/:id', upload.array('files', 5), updateTask);
 
-// Görevi sil
+// 4. Görevi sil
 router.delete('/:id', deleteTask);
-// Görev oluştururken dosya yükleme (max 5 dosya)
-router.post('/', protect, upload.array('files', 5), createTask);
-
-// Görev güncellerken yeni dosya ekleme
-router.put('/:id', protect, upload.array('files', 5), updateTask);
 
 module.exports = router;
