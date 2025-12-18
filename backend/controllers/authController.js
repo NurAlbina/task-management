@@ -1,12 +1,13 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Token oluştur (login ve register'da)
+// Token oluştur (login ve register'da kullanılır)
 const generateToken = (user) => {
   return jwt.sign(
     { 
       id: user._id,
-      name: user.name  // İsmi token'a ekle
+      name: user.name,
+      role: user.role  // KRİTİK: Rol bilgisini token'a ekledik 
     }, 
     process.env.JWT_SECRET, 
     { expiresIn: '30d' }

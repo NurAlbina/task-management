@@ -20,6 +20,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Lütfen bir şifre girin'],
     minlength: 6, // Şifre en az 6 karakter olmalı
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'], // Sadece bu iki rol kabul edilir [cite: 71]
+    default: 'user' // Yeni kayıt olan herkes standart kullanıcıdır [cite: 72]
   }
 }, {
   // Otomatik olarak createdAt ve updatedAt alanları ekler
