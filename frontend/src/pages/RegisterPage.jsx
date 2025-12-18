@@ -47,8 +47,8 @@ const RegisterPage = () => {
       minLength: password.length >= 6,
       hasUppercase: /[A-Z]/.test(password),
       hasNumber: /[0-9]/.test(password),
-      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>_]/.test(password) 
+    }; 
   };
 
   // Şifre gereksinimlerini kontrol et

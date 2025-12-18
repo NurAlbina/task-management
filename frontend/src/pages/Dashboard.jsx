@@ -10,6 +10,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userName, setUserName] = useState('');
+  const [showDetailModal, setShowDetailModal] = useState(false); 
+  const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
 
   const navigate = useNavigate();
 
@@ -154,9 +156,10 @@ const Dashboard = () => {
             {tasks.map(task => (
               <div 
                 key={task._id} 
-                className={`bg-[#112240] border rounded-2xl p-6 transition-all hover:border-teal-500/30 flex flex-col gap-4 ${
+                className={`bg-[#112240] border rounded-2xl p-6 transition-all hover:border-teal-500/30 flex flex-col gap-4 cursor-pointer ${
                   task.status === 'completed' ? 'border-green-500/20 opacity-75 hover:opacity-100' : 'border-white/10'
                 }`}
+                onClick={() => { setSelectedTaskDetail(task); setShowDetailModal(true); }}
               >
                 {/* --- ÜST KISIM: Bilgiler ve Butonlar --- */}
                 <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -190,7 +193,7 @@ const Dashboard = () => {
                   </div>
 
                   {/* SAĞ: Aksiyon Butonları (İkon Halinde) */}
-                  <div className="flex items-center gap-2 self-start md:self-center">
+                  <div className="flex items-center gap-2 self-start md:self-center" onClick={(e) => e.stopPropagation()}>
                     {task.status === 'pending' && (
                       <button 
                         onClick={() => handleChangeStatus(task, 'in-progress')} 
@@ -240,7 +243,7 @@ const Dashboard = () => {
 
                 {/* --- ALT KISIM: Dosya Ekleri (Tam Genişlik) --- */}
                 {task.attachments && task.attachments.length > 0 && (
-                  <div className="mt-2 pt-4 border-t border-white/5 w-full">
+                  <div className="mt-2 pt-4 border-t border-white/5 w-full" onClick={(e) => e.stopPropagation()}>
                     <h4 className="text-[10px] font-bold text-gray-500 uppercase mb-3 flex items-center gap-2 tracking-wider">
                       <span className="bg-teal-500/20 text-teal-400 p-1 rounded">📎</span>
                       Attachments ({task.attachments.length})
@@ -294,6 +297,95 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {showDetailModal && selectedTaskDetail && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowDetailModal(false)}>
+          <div 
+            className="bg-[#112240] border border-white/10 rounded-2xl p-8 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-semibold text-white">{selectedTaskDetail.title}</h3>
+
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Description */}
+              <div>
+                <p className="text-gray-400 text-sm mb-2">Description</p>
+                <p className="text-white bg-black/20 p-4 rounded-xl min-h-[100px]">
+                  {selectedTaskDetail.description || 'No description'}
+                </p>
+              </div>
+
+              {/* Grid Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-400 text-sm mb-2">Category</p>
+                  <p className="text-teal-300 font-medium">{selectedTaskDetail.category}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-2">Status</p>
+                  <span className={`px-3 py-1 rounded-lg text-xs font-medium border inline-block ${getStatusColor(selectedTaskDetail.status)}`}>
+                    {selectedTaskDetail.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-2">Created</p>
+                  <p className="text-white">{new Date(selectedTaskDetail.createdAt).toLocaleDateString('tr-TR')}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-2">Due Date</p>
+                  <p className="text-white">
+                    {selectedTaskDetail.dueDate 
+                      ? new Date(selectedTaskDetail.dueDate).toLocaleDateString('tr-TR')
+                      : 'No due date'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Attachments */}
+              {selectedTaskDetail.attachments && selectedTaskDetail.attachments.length > 0 && (
+                <div className="border-t border-white/10 pt-4">
+                  <p className="text-gray-400 text-sm mb-3">Attachments ({selectedTaskDetail.attachments.length})</p>
+                  <div className="space-y-2">
+                    {selectedTaskDetail.attachments.map((file, index) => {
+                      let cleanName = file.fileName;
+                      try { cleanName = decodeURIComponent(escape(file.fileName)); } catch (e) {}
+                      
+                      return (
+                        <a
+                          key={index}
+                          href={`http://localhost:5000${file.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"
+                        >
+                          <span className="text-xl">📎</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white truncate text-sm">{cleanName}</p>
+                            <p className="text-gray-500 text-xs">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <span className="text-teal-400 text-sm">↓</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

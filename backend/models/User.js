@@ -23,8 +23,8 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'], // Sadece bu iki rol kabul edilir [cite: 71]
-    default: 'user' // Yeni kayıt olan herkes standart kullanıcıdır [cite: 72]
+    enum: ['user', 'admin'], // Sadece bu iki rol kabul edilir 
+    default: 'user' // Yeni kayıt olan herkes standart kullanıcıdır
   }
 }, {
   // Otomatik olarak createdAt ve updatedAt alanları ekler
