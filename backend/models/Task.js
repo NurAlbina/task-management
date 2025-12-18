@@ -36,7 +36,14 @@ const TaskSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
-  }
+  },
+  attachments: [{
+    fileName: { type: String, required: true }, // [cite: 62]
+    fileUrl: { type: String, required: true },  // [cite: 63]
+    fileSize: { type: Number, required: true }, // [cite: 65]
+    uploadDate: { type: Date, default: Date.now }, // [cite: 66]
+    uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // [cite: 68]
+  }]
 }, { 
   timestamps: true // createdAt ve updatedAt otomatik eklenir
 });

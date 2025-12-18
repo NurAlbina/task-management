@@ -12,19 +12,29 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// Yeni görev oluştur
+/// Yeni görev oluştur (Dosya desteği ile - Requirement 8.1)
 exports.createTask = async (req, res) => {
   try {
     const { title, description, category, dueDate, dueTime } = req.body;
 
-    // Yeni görev oluştur ve kullanıcı ID'sini ekle
+    // 1. Multer tarafından yüklenen dosyaları al ve formatla
+    // Eğer dosya yüklenmediyse boş bir dizi döner
+    const attachments = req.files ? req.files.map(file => ({
+      fileName: file.originalname,           // Orijinal dosya adı
+      fileUrl: `/uploads/${file.filename}`,  // Dosyaya erişim yolu
+      fileSize: file.size,                   // Dosya boyutu (bytes)
+      uploadDate: new Date()                 // Yükleme tarihi
+    })) : [];
+
+    // 2. Yeni görevi veritabanına kaydet
     const task = await Task.create({
       title,
       description,
       category,
       dueDate,
       dueTime,
-      userId: req.user._id
+      userId: req.user._id,
+      attachments: attachments // Dosya bilgilerini buraya ekliyoruz
     });
 
     res.status(201).json(task);

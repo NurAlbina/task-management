@@ -4,7 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-
+const path = require('path');
 
 
 // .env dosyasındaki gizli bilgilere erişmek için
@@ -44,7 +44,7 @@ app.use('/api/auth', authRoutes);
 // /api/tasks ile başlayan tüm istekleri 'taskRoutes' dosyasına yönlendir
 app.use('/api/tasks', taskRoutes);
 
-
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 // Sunucuyu dinlemeye başla
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
