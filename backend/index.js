@@ -1,5 +1,6 @@
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks'); 
+const adminRoutes = require('./routes/admin');
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
@@ -43,6 +44,9 @@ app.use('/api/auth', authRoutes);
 
 // /api/tasks ile başlayan tüm istekleri 'taskRoutes' dosyasına yönlendir
 app.use('/api/tasks', taskRoutes);
+
+// /api/admin ile başlayan istekleri adminRoutes'a yönlendir
+app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 // Sunucuyu dinlemeye başla
