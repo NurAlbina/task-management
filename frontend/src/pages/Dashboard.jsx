@@ -196,7 +196,7 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2 self-start md:self-center" onClick={(e) => e.stopPropagation()}>
                     {task.status === 'pending' && (
                       <button 
-                        onClick={() => handleChangeStatus(task, 'in-progress')} 
+                        onClick={(e) => { e.stopPropagation(); handleChangeStatus(task, 'in-progress'); }} 
                         className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-all"
                         title="Start Task"
                       >
@@ -205,7 +205,7 @@ const Dashboard = () => {
                     )}
                     {task.status === 'in-progress' && (
                       <button 
-                        onClick={() => handleChangeStatus(task, 'completed')} 
+                        onClick={(e) => { e.stopPropagation(); handleChangeStatus(task, 'completed'); }} 
                         className="p-2.5 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 transition-all"
                         title="Complete Task"
                       >
@@ -214,7 +214,7 @@ const Dashboard = () => {
                     )}
                     {task.status === 'completed' && (
                       <button 
-                        onClick={() => handleChangeStatus(task, 'pending')} 
+                        onClick={(e) => { e.stopPropagation(); handleChangeStatus(task, 'pending'); }} 
                         className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-all"
                         title="Undo"
                       >
@@ -225,14 +225,14 @@ const Dashboard = () => {
                     <div className="w-px h-8 bg-white/10 mx-1"></div> {/* Ayırıcı Çizgi */}
 
                     <button 
-                      onClick={() => handleEditClick(task)} 
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(task); }} 
                       className="p-2.5 rounded-xl bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition-all"
                       title="Edit"
                     >
                       ✎
                     </button>
                     <button 
-                      onClick={() => handleDeleteTask(task._id)} 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTask(task._id); }} 
                       className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all"
                       title="Delete"
                     >

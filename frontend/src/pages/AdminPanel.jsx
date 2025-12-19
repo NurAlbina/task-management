@@ -267,19 +267,20 @@ const AdminPanel = () => {
                       <td className="py-4">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => openEditModal(task)}
+                            // Buton tıklanınca detay modalinin açılmasını engellemek için
+                            onClick={(e) => { e.stopPropagation(); openEditModal(task); }} 
                             className="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 border border-teal-500/30 text-xs font-medium transition-all"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => { setSelectedTask(task); setShowAssignModal(true); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setShowAssignModal(true); }}
                             className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 border border-purple-500/30 text-xs font-medium transition-all"
                           >
                             Assign
                           </button>
                           <button
-                            onClick={() => handleDeleteTask(task._id)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTask(task._id); }}
                             className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20 border border-red-500/30 text-xs font-medium transition-all"
                           >
                             Delete
