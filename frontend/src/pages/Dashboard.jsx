@@ -106,6 +106,41 @@ const Dashboard = () => {
     return colors[status] || colors.pending;
   };
 
+  // Deadline'a göre uyarı renkleri ve badge
+  const getDeadlineAlert = (dueDate, status) => {
+    if (!dueDate || status === 'completed') return { border: '', badge: null };
+    
+    const now = new Date();
+    const deadline = new Date(dueDate);
+    const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) {
+      return {
+        border: 'border-red-700 shadow-lg shadow-red-900/50',
+        badge: <span className="px-3 py-1 rounded-lg text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/50 animate-pulse">⚠️ OVERDUE</span>
+      };
+    }
+    if (daysLeft <= 3) {
+      return {
+        border: 'border-red-500/70 shadow-md shadow-red-900/30',
+        badge: <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30">🔥 {daysLeft}d left</span>
+      };
+    }
+    if (daysLeft <= 7) {
+      return {
+        border: 'border-yellow-500/60 shadow-md shadow-yellow-900/20',
+        badge: <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">⏰ {daysLeft}d left</span>
+      };
+    }
+    if (daysLeft <= 10) {
+      return {
+        border: 'border-blue-500/50 shadow-sm shadow-blue-900/20',
+        badge: <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">📌 {daysLeft}d left</span>
+      };
+    }
+    return { border: '', badge: null };
+  };
+
   const filteredTasks = tasks.filter(task => {
     const categoryMatch = filterCategory === 'all' || task.category === filterCategory;
     const statusMatch = filterStatus === 'all' || task.status === filterStatus;
@@ -218,11 +253,16 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredTasks.map(task => (
+            {filteredTasks.map(task => {
+              const deadlineAlert = getDeadlineAlert(task.dueDate, task.status);
+              
+              return (
               <div 
                 key={task._id} 
-                className={`bg-[#112240] border rounded-2xl p-6 transition-all hover:border-teal-500/30 flex flex-col gap-4 cursor-pointer ${
-                  task.status === 'completed' ? 'border-green-500/20 opacity-75 hover:opacity-100' : 'border-white/10'
+                className={`bg-[#112240] border-2 rounded-2xl p-6 transition-all hover:border-teal-500/30 flex flex-col gap-4 cursor-pointer ${
+                  task.status === 'completed' 
+                    ? 'border-green-500/20 opacity-75 hover:opacity-100' 
+                    : deadlineAlert.border || 'border-white/10'
                 }`}
                 onClick={() => { setSelectedTaskDetail(task); setShowDetailModal(true); }}
               >
@@ -254,6 +294,7 @@ const Dashboard = () => {
                           📅 {new Date(task.dueDate).toLocaleDateString('tr-TR')}
                         </span>
                       )}
+                      {deadlineAlert.badge}
                     </div>
                   </div>
 
@@ -358,7 +399,8 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
