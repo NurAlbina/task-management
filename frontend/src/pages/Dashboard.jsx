@@ -12,6 +12,8 @@ const Dashboard = () => {
   const [userName, setUserName] = useState('');
   const [showDetailModal, setShowDetailModal] = useState(false); 
   const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const navigate = useNavigate();
 
@@ -104,8 +106,13 @@ const Dashboard = () => {
     return colors[status] || colors.pending;
   };
 
-  const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const totalTasks = tasks.length;
+  const filteredTasks = tasks.filter(task => {
+    const categoryMatch = filterCategory === 'all' || task.category === filterCategory;
+    const statusMatch = filterStatus === 'all' || task.status === filterStatus;
+    return categoryMatch && statusMatch;
+  });
+  const completedTasks = filteredTasks.filter(t => t.status === 'completed').length;
+  const totalTasks = filteredTasks.length;
 
   if (loading) {
     return (
@@ -140,20 +147,78 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Filtreleme kontrolleri */}
+        <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-lg font-semibold">Filter</span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Kategori filtresi */}
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-[#0a192f] text-white border border-white/10 focus:border-teal-500 focus:outline-none transition-all"
+              >
+                <option value="all">All Categories</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Health">Health</option>
+                <option value="Other">Other</option>
+              </select>
+
+              {/* Durum filtresi */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-[#0a192f] text-white border border-white/10 focus:border-teal-500 focus:outline-none transition-all"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+
+              {/* Filtreleri temizle */}
+              {(filterCategory !== 'all' || filterStatus !== 'all') && (
+                <button
+                  onClick={() => { setFilterCategory('all'); setFilterStatus('all'); }}
+                  className="px-4 py-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20 border border-red-500/30 transition-all text-sm font-medium"
+                >
+                  ✕ Clear Filters
+                </button>
+              )}
+            </div>
+
+            {/* Aktif filtre göstergesi */}
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-gray-400 text-sm">
+                Showing {filteredTasks.length} of {tasks.length} tasks
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Görev Listesi */}
-        {tasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <div className="bg-[#112240] border border-white/10 rounded-2xl p-12 text-center">
-            <p className="text-gray-400 text-lg mb-4">No tasks yet</p>
-            <Link
-              to="/add-task"
-              className="inline-block px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg shadow-teal-900/20"
-            >
-              Create Your First Task
-            </Link>
+            <p className="text-gray-400 text-lg mb-4">
+              {tasks.length === 0 ? 'No tasks yet' : 'No tasks match the selected filters'}
+            </p>
+            {tasks.length === 0 && (
+              <Link
+                to="/add-task"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg shadow-teal-900/20"
+              >
+                Create Your First Task
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {tasks.map(task => (
+            {filteredTasks.map(task => (
               <div 
                 key={task._id} 
                 className={`bg-[#112240] border rounded-2xl p-6 transition-all hover:border-teal-500/30 flex flex-col gap-4 cursor-pointer ${
@@ -161,7 +226,7 @@ const Dashboard = () => {
                 }`}
                 onClick={() => { setSelectedTaskDetail(task); setShowDetailModal(true); }}
               >
-                {/* --- ÜST KISIM: Bilgiler ve Butonlar --- */}
+                {/* ÜST KISIM: Bilgiler ve Butonlar */}
                 <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                   
                   {/* SOL: Görev Detayları */}
