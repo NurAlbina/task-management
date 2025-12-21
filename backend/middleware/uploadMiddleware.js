@@ -1,40 +1,50 @@
 const multer = require('multer');
+const s3 = require('../config/s3Config'); // S3 konfigürasyonunu içeri aktar
+const multerS3 = require('multer-s3');
 const path = require('path');
 
-// 1. Dosyaların nereye ve hangi isimle kaydedileceği
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Daha önce oluşturduğumuz klasör
-  },
-  filename: (req, file, cb) => {
-    // Dosya ismini çakışmaması için: tarih + orijinal isim
-    const originalNameFixed = Buffer.from(file.originalname, 'latin1').toString('utf8');
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
+// ... (Desteklenen dosya türleri ve boyutu aynı kalır) ...
+const allowedMimeTypes = [
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
+
+// S3 Depolama Ayarı 
+const s3Storage = multerS3({
+    s3: s3,
+    bucket: process.env.S3_BUCKET_NAME,
+    metadata: function (req, file, cb) {
+        cb(null, { 
+            fieldName: file.fieldname,
+            userId: req.user.id // Kullanıcı kimliğini meta veriye ekle
+        });
+    },
+    key: function (req, file, cb) {
+        // S3 içinde benzersiz bir dosya adı (anahtar) oluştur
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const fileName = `attachments/${req.user.id}/${uniqueSuffix}${path.extname(file.originalname)}`;
+        cb(null, fileName);
+    }
 });
 
-// 2. Dosya Türü Kısıtlaması (Requirement 53)
+// Dosya filtresi 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'application/pdf', 
-    'image/png', 
-    'image/jpeg', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // XLSX
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+        return cb(new Error('Desteklenmeyen dosya türü.'), false);
+    }
     cb(null, true);
-  } else {
-    cb(new Error('Desteklenmeyen dosya formatı. Sadece PDF, PNG, JPG, DOCX ve XLSX yüklenebilir.'), false);
-  }
 };
 
-// 3. Multer Başlatma (Requirement 55: Max 10MB)
+// Multer konfigürasyonu
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB sınırı
+    storage: s3Storage, // s3Storage kullanılıyor
+    fileFilter: fileFilter,
+    limits: { 
+        fileSize: 10 * 1024 * 1024 // Maksimum dosya boyutu: 10 MB [cite: 55]
+    }
 });
 
 module.exports = upload;

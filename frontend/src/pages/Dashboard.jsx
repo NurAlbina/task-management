@@ -364,7 +364,7 @@ const Dashboard = () => {
                          return (
                           <a
                             key={index}
-                            href={`http://localhost:5000${file.fileUrl}`}
+                            href={file.fileUrl} // DÜZELTME: Doğrudan S3 URL'si kullanılıyor
                             target="_blank"
                             rel="noopener noreferrer"
                             className="group flex items-center gap-3 p-3 rounded-xl bg-[#0a192f] border border-white/10 hover:border-teal-500/40 hover:bg-teal-500/5 transition-all relative overflow-hidden"

@@ -253,11 +253,25 @@ const TaskFormPage = () => {
                   Attached Files
                 </label>
                 {existingAttachments.map((file, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-red-500/30 transition-all">
-                    <div className="flex items-center gap-2">
-                      <span className="text-teal-400">📎</span>
-                      <span className="text-teal-100 text-xs truncate max-w-[200px]">{file.fileName}</span>
+                  <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-teal-500/30 transition-all">
+                    
+                    {/* Dosya İsmine Tıklama Özelliği Eklendi */}
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                      onClick={() => handleDownload(file._id, file.fileName)} // Tıklayınca indir
+                      title="Click to download/preview"
+                    >
+                      <span className="text-teal-400 text-lg">📄</span>
+                      <div className="flex flex-col">
+                        <span className="text-teal-100 text-xs font-medium truncate max-w-[200px] hover:underline hover:text-teal-300">
+                          {file.fileName}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          {(file.fileSize / 1024).toFixed(1)} KB
+                        </span>
+                      </div>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => handleRemoveExistingFile(file.fileUrl)}

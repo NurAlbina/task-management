@@ -1,17 +1,20 @@
+// 1. Gerekli kütüphaneleri içeri aktar (import)
+const dotenv = require('dotenv');
+// 2. .env dosyasındaki gizli bilgilere erişmek için
+dotenv.config();
+
+
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks'); 
 const adminRoutes = require('./routes/admin');
 const express = require('express');
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 
 
-// .env dosyasındaki gizli bilgilere erişmek için
-dotenv.config();
 
-// Veritabanına bağlanacak fonksiyon
+// 3. Veritabanına bağlanacak fonksiyon
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
@@ -23,23 +26,25 @@ const connectDB = async () => {
   }
 };
 
-// Veritabanına bağlanmayı dene
+// 4. Veritabanına bağlanmayı dene
 connectDB();
 
-// Express sunucusunu başlat
+// 5. Express sunucusunu başlat
 const app = express();
 
-// CORS ayarları, frontend'den gelen istekleri kabul et
+// 6. Gerekli ara yazılımları (middleware) kullan
+// Frontend'den (React) gelen isteklere izin ver
 app.use(cors());
-// Gelen JSON formatındaki istekleri işleyebilmek için
+// Gelen JSON formatındaki verileri (body) parse et
 app.use(express.json());
 
-// Test için bir endpoint (/localhost:5000/)
+// 7. Test için bir ana rota (endpoint)
+// Tarayıcıda http://localhost:5000/ adresine girince görünecek
 app.get('/', (req, res) => {
   res.send('API çalışıyor...');
 });
-
-// /api/auth ile başlayan tüm istekleri 'authRoutes' dosyasına yönlendir
+// --- API Rotaları ---
+// /api/auth ile başlayan TÜM istekleri 'authRoutes' dosyasına yönlendir
 app.use('/api/auth', authRoutes);
 
 // /api/tasks ile başlayan tüm istekleri 'taskRoutes' dosyasına yönlendir
@@ -49,7 +54,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
-// Sunucuyu dinlemeye başla
+
+// 8. Sunucuyu dinlemeye başla
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda başarıyla başlatıldı.`);

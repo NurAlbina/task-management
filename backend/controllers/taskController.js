@@ -1,11 +1,30 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
-const fs = require('fs'); // Dosya silmek için gerekli
-const path = require('path');
+const s3 = require('../config/s3Config'); // S3 Konfigürasyonunu çağırıyoruz
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+
+// --- YARDIMCI FONKSİYON: S3'ten Dosya Silme (SDK v3) ---
+const deleteFileFromS3 = async (fileKey) => {
+  if (!fileKey) return;
+  
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: fileKey
+  };
+
+  try {
+    // v3'te komut göndererek silme yapılır
+    const command = new DeleteObjectCommand(params);
+    await s3.send(command);
+    console.log(`S3'ten dosya silindi: ${fileKey}`);
+  } catch (error) {
+    console.error(`S3 dosya silme hatası (${fileKey}):`, error);
+  }
+};
+
 // Tüm görevleri getir (sadece giriş yapan kullanıcının görevleri)
 exports.getTasks = async (req, res) => {
   try {
-    // Kullanıcının kendi görevlerini bul, en yeniler üstte
     const tasks = await Task.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (error) {
@@ -14,18 +33,19 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-/// Yeni görev oluştur (Dosya desteği ile - Requirement 8.1)
+// Yeni görev oluştur (AWS S3 Desteği ile)
 exports.createTask = async (req, res) => {
   try {
     const { title, description, category, dueDate, dueTime } = req.body;
 
-    // 1. Multer tarafından yüklenen dosyaları al ve formatla
-    // Eğer dosya yüklenmediyse boş bir dizi döner
+    // 1. Multer-S3 tarafından yüklenen dosyaları al ve formatla
+    // Not: Multer-S3 'req.files' içine 'key' ve 'location' ekler
     const attachments = req.files ? req.files.map(file => ({
-      fileName: file.originalname,           // Orijinal dosya adı
-      fileUrl: `/uploads/${file.filename}`,  // Dosyaya erişim yolu
-      fileSize: file.size,                   // Dosya boyutu (bytes)
-      uploadDate: new Date()                 // Yükleme tarihi
+      fileName: file.originalname,      // Orijinal dosya adı
+      fileUrl: file.location,           // S3 URL'si (Frontend'de göstermek için)
+      fileKey: file.key,                // S3 Anahtarı (Silmek için gerekli - ÖNEMLİ)
+      fileSize: file.size,              // Dosya boyutu
+      uploadDate: new Date()
     })) : [];
 
     // 2. Yeni görevi veritabanına kaydet
@@ -36,7 +56,7 @@ exports.createTask = async (req, res) => {
       dueDate,
       dueTime,
       userId: req.user._id,
-      attachments: attachments // Dosya bilgilerini buraya ekliyoruz
+      attachments: attachments
     });
 
     res.status(201).json(task);
@@ -46,7 +66,7 @@ exports.createTask = async (req, res) => {
   }
 };
 
-// Görevi güncelle (Dosya yönetimi dahil - Requirement 8.1)
+// Görevi güncelle (AWS S3 Desteği ile)
 exports.updateTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -55,31 +75,36 @@ exports.updateTask = async (req, res) => {
       return res.status(404).json({ message: 'Görev bulunamadı' });
     }
 
-    // Yetki kontrolü
     if (task.userId.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Bu göreve erişim yetkiniz yok' });
     }
 
-    // 1. SİLİNECEK DOSYALARI YÖNET (Arayüzden "Sil"e basılan dosyalar)
+    // 1. SİLİNECEK DOSYALARI YÖNET
+    // Frontend'den silinecek dosyaların fileUrl veya fileKey'i gelmeli
     if (req.body.deletedFiles) {
-      const filesToDelete = JSON.parse(req.body.deletedFiles); // Frontend'den gelen liste
+      const filesToDelete = JSON.parse(req.body.deletedFiles); // Örn: ["https://s3...", "https://s3..."]
       
-      filesToDelete.forEach(fileUrl => {
-        // Fiziksel dosyayı sunucudan (uploads klasöründen) sil
-        const filePath = path.join(__dirname, '..', fileUrl);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+      // Döngüyle silinecek dosyaları işle
+      for (const fileUrlToDelete of filesToDelete) {
+        // Veritabanındaki attachment objesini bul
+        const attachmentObj = task.attachments.find(att => att.fileUrl === fileUrlToDelete);
+        
+        if (attachmentObj && attachmentObj.fileKey) {
+            // S3'ten sil
+            await deleteFileFromS3(attachmentObj.fileKey);
         }
-        // Veritabanındaki diziden çıkar
-        task.attachments = task.attachments.filter(att => att.fileUrl !== fileUrl);
-      });
+
+        // Veritabanı dizisinden çıkar
+        task.attachments = task.attachments.filter(att => att.fileUrl !== fileUrlToDelete);
+      }
     }
 
-    // 2. YENİ DOSYALARI EKLE
+    // 2. YENİ DOSYALARI EKLE (S3'e zaten yüklendi, veritabanına ekliyoruz)
     if (req.files && req.files.length > 0) {
       const newAttachments = req.files.map(file => ({
         fileName: file.originalname,
-        fileUrl: `/uploads/${file.filename}`,
+        fileUrl: file.location,  // S3 URL
+        fileKey: file.key,       // S3 Key
         fileSize: file.size,
         uploadDate: new Date()
       }));
@@ -87,7 +112,6 @@ exports.updateTask = async (req, res) => {
     }
 
     // 3. DİĞER ALANLARI GÜNCELLE
-    // Başlık, açıklama, kategori vb. verileri body'den alıp task objesine yazıyoruz
     const { title, description, category, dueDate, status } = req.body;
     task.title = title || task.title;
     task.description = description || task.description;
@@ -95,7 +119,7 @@ exports.updateTask = async (req, res) => {
     task.dueDate = dueDate || task.dueDate;
     task.status = status || task.status;
 
-    const updatedTask = await task.save(); // Değişiklikleri kaydet
+    const updatedTask = await task.save();
     res.json(updatedTask);
 
   } catch (error) {
@@ -104,7 +128,7 @@ exports.updateTask = async (req, res) => {
   }
 };
 
-// Görevi sil (Dosyaları fiziksel olarak siler - Requirement 8.1)
+// Görevi sil (Dosyaları S3'ten siler)
 exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -117,14 +141,13 @@ exports.deleteTask = async (req, res) => {
       return res.status(401).json({ message: 'Bu görevi silme yetkiniz yok' });
     }
 
-    // GÖREVE AİT TÜM DOSYALARI SUNUCUDAN SİL (Temizlik)
+    // GÖREVE AİT TÜM DOSYALARI S3'TEN SİL
     if (task.attachments && task.attachments.length > 0) {
-      task.attachments.forEach(file => {
-        const filePath = path.join(__dirname, '..', file.fileUrl);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath); // Dosyayı bilgisayardan siler
+      for (const file of task.attachments) {
+        if (file.fileKey) {
+            await deleteFileFromS3(file.fileKey);
         }
-      });
+      }
     }
 
     await Task.findByIdAndDelete(req.params.id);
@@ -138,7 +161,6 @@ exports.deleteTask = async (req, res) => {
 
 // --- ADMIN FONKSİYONLARI ---
 
-// Admin: Tüm görevleri getir
 exports.getAllTasks = async (req, res) => {
   try {
     const tasks = await Task.find()
@@ -150,7 +172,6 @@ exports.getAllTasks = async (req, res) => {
   }
 };
 
-// Admin: Tüm kullanıcıları getir
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
@@ -160,7 +181,6 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Admin: Görev ata
 exports.assignTask = async (req, res) => {
   try {
     const { taskId, userId } = req.body;
@@ -194,14 +214,13 @@ exports.deleteAnyTask = async (req, res) => {
       return res.status(404).json({ message: 'Görev bulunamadı' });
     }
     
-    // Dosyaları sil
+    // Dosyaları S3'ten sil
     if (task.attachments && task.attachments.length > 0) {
-      task.attachments.forEach(file => {
-        const filePath = path.join(__dirname, '..', file.fileUrl);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+        for (const file of task.attachments) {
+            if (file.fileKey) {
+                await deleteFileFromS3(file.fileKey);
+            }
         }
-      });
     }
     
     await Task.findByIdAndDelete(req.params.id);
@@ -211,7 +230,6 @@ exports.deleteAnyTask = async (req, res) => {
   }
 };
 
-// Admin: İstatistikler
 exports.getAdminStats = async (req, res) => {
   try {
     const totalTasks = await Task.countDocuments();
@@ -232,24 +250,21 @@ exports.getAdminStats = async (req, res) => {
   }
 };
 
-// Admin: Başka kullanıcı için görev oluştur
 exports.createTaskForUser = async (req, res) => {
   try {
-    console.log('=== CREATE TASK FOR USER ===');
-    console.log('req.body:', req.body);
-    
     const { title, description, category, status, dueDate, dueTime, assignToUserId } = req.body;
     
     if (!assignToUserId) {
       return res.status(400).json({ message: 'Kullanıcı seçimi zorunludur' });
     }
     
-    // Kullanıcı var mı kontrol et
     const targetUser = await User.findById(assignToUserId);
     if (!targetUser) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
     
+    // Not: Admin panelinden dosya yükleme desteği şu an bu endpoint'te yok
+    // Eğer eklenecekse createTasks ile aynı mantık (req.files kullanımı) eklenmeli
     const task = await Task.create({
       userId: assignToUserId,
       title,
@@ -261,7 +276,6 @@ exports.createTaskForUser = async (req, res) => {
     });
     
     const populatedTask = await Task.findById(task._id).populate('userId', 'name email');
-    console.log('Task created:', populatedTask);
     res.status(201).json(populatedTask);
   } catch (error) {
     console.error('Create task for user error:', error);
@@ -269,7 +283,6 @@ exports.createTaskForUser = async (req, res) => {
   }
 };
 
-// Admin: Herhangi bir görevi güncelle
 exports.updateAnyTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
