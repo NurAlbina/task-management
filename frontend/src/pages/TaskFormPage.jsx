@@ -246,43 +246,51 @@ const TaskFormPage = () => {
 
             {/* Dosya yönetim alanı*/}
             
-            {/* Mevcut Dosyalar Listesi (Sadece varsa göster) */}
-            {existingAttachments.length > 0 && (
-              <div className="space-y-2 border border-white/10 p-4 rounded-xl bg-black/10">
-                <label className="block text-teal-200/50 text-[10px] font-bold uppercase tracking-widest mb-2">
-                  Attached Files
-                </label>
-                {existingAttachments.map((file, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-teal-500/30 transition-all">
-                    
-                    {/* Dosya İsmine Tıklama Özelliği Eklendi */}
-                    <div 
-                      className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-                      onClick={() => handleDownload(file._id, file.fileName)} // Tıklayınca indir
-                      title="Click to download/preview"
-                    >
-                      <span className="text-teal-400 text-lg">📄</span>
-                      <div className="flex flex-col">
-                        <span className="text-teal-100 text-xs font-medium truncate max-w-[200px] hover:underline hover:text-teal-300">
-                          {file.fileName}
-                        </span>
-                        <span className="text-[10px] text-gray-500">
-                          {(file.fileSize / 1024).toFixed(1)} KB
-                        </span>
-                      </div>
-                    </div>
+            {/* Mevcut Dosyalar Listesi (Requirement 8.1) */}
+{existingAttachments.length > 0 && (
+  <div className="space-y-2 border border-white/10 p-4 rounded-xl bg-black/10">
+    <label className="block text-teal-200/50 text-[10px] font-bold uppercase tracking-widest mb-2">
+      Attached Files
+    </label>
+    {existingAttachments.map((file, index) => (
+      <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-teal-500/30 transition-all">
+        
+        {/* Dosya İndirme/Görüntüleme Alanı */}
+        <a
+          // BULUT KONTROLÜ: Eğer link 'http' ile başlıyorsa direkt kullan, değilse localhost ekle
+          href={file.fileUrl.startsWith('http') ? file.fileUrl : `http://localhost:5000${file.fileUrl}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+          title="Click to download/preview"
+        >
+          <span className="text-teal-400 text-lg">📄</span>
+          <div className="flex flex-col">
+            {/* KARAKTER DÜZELTME: AdsÄ±z -> Adsız */}
+            <span className="text-teal-100 text-xs font-medium truncate max-w-[200px] hover:underline hover:text-teal-300">
+              {(() => {
+                try { return decodeURIComponent(escape(file.fileName)); } 
+                catch (e) { return file.fileName; }
+              })()}
+            </span>
+            <span className="text-[10px] text-gray-500">
+              {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+            </span>
+          </div>
+        </a>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExistingFile(file.fileUrl)}
-                      className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase px-2 py-1 bg-red-500/10 rounded-md transition-colors hover:bg-red-500/20"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Silme Butonu (Mevcut mantığın kalsın) */}
+        <button
+          type="button"
+          onClick={() => handleRemoveExistingFile(file.fileUrl)}
+          className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase px-2 py-1 bg-red-500/10 rounded-md transition-colors"
+        >
+          Remove
+        </button>
+      </div>
+    ))}
+  </div>
+)}
 
             {/* Yeni Dosya Yükleme Alanı */}
             <div>

@@ -595,22 +595,29 @@ const AdminPanel = () => {
                 <div className="border-t border-white/10 pt-4">
                   <p className="text-gray-400 text-sm mb-3">Attachments ({selectedTaskDetail.attachments.length})</p>
                   <div className="space-y-2">
-                    {selectedTaskDetail.attachments.map((file, index) => (
-                      <a
-                        key={index}
-                        href={`http://localhost:5000${file.fileUrl}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"
-                      >
-                        <span className="text-xl">📎</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white truncate text-sm">{file.fileName}</p>
-                          <p className="text-gray-500 text-xs">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
-                        </div>
-                        <span className="text-teal-400 text-sm">↓</span>
-                      </a>
-                    ))}
+                  {selectedTaskDetail.attachments.map((file, index) => (
+  <a
+    key={index}
+    // URL Kontrolü: Eğer bulut linkiyse direkt kullan, değilse localhost ekle
+    href={file.fileUrl.startsWith('http') ? file.fileUrl : `http://localhost:5000${file.fileUrl}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"
+  >
+    <span className="text-xl">📎</span>
+    <div className="flex-1 min-w-0">
+      {/* İsimdeki karakter bozukluğunu düzelten güvenli gösterim */}
+      <p className="text-white truncate text-sm">
+        {(() => {
+          try { return decodeURIComponent(escape(file.fileName)); } 
+          catch (e) { return file.fileName; }
+        })()}
+      </p>
+      <p className="text-gray-500 text-xs">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+    </div>
+    <span className="text-teal-400 text-sm">↓</span>
+  </a>
+))}
                   </div>
                 </div>
               )}
