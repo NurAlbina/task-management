@@ -472,7 +472,7 @@ const Dashboard = () => {
                       return (
                         <a
                           key={index}
-                          href={`http://localhost:5000${file.fileUrl}`}
+                          href={file.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"

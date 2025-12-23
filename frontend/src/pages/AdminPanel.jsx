@@ -19,9 +19,9 @@ const AdminPanel = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
 
-  // --- DOSYA YÖNETİMİ İÇİN YENİ STATE'LER (Requirement 8.1) ---
+  // DOSYA YÖNETİMİ İÇİN YENİ STATE'LER 
   const [selectedFiles, setSelectedFiles] = useState([]); // Yeni seçilen dosyalar
-  const [existingAttachments, setExistingAttachments] = useState([]); // Düzenlemede mevcut dosyalar
+  const [existingAttachments, setExistingAttachments] = useState([]); // Hem yeni hem mevcut dosyalar
   const [filesToDelete, setFilesToDelete] = useState([]); // Silinecek dosyalar listesi
 
   const [newTask, setNewTask] = useState({
@@ -101,6 +101,24 @@ const AdminPanel = () => {
     }
   };
 
+  // Dosya input değişimi (Create Modal için)
+  const handleCreateFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setExistingAttachments(prev => [
+      ...prev,
+      ...files.map(file => ({
+        file,
+        fileName: file.name,
+        fileSize: file.size,
+        fileUrl: URL.createObjectURL(file),
+        isNew: true
+      }))
+    ]);
+    setSelectedFiles([]); // input'u temizle
+    e.target.value = ''; // input'u sıfırla
+  };
+
   // --- YENİ GÖREV OLUŞTURMA (DOSYA DESTEKLİ) ---
   const handleCreateTask = async () => {
     if (!newTask.title || !newTask.assignToUserId) {
@@ -115,11 +133,13 @@ const AdminPanel = () => {
       formData.append('category', newTask.category);
       formData.append('status', newTask.status);
       formData.append('dueDate', newTask.dueDate);
-      formData.append('assignToUserId', newTask.assignToUserId); // Admin için özel alan
+      formData.append('assignToUserId', newTask.assignToUserId);
 
-      // Dosyaları ekle
-      selectedFiles.forEach(file => {
-        formData.append('files', file);
+      // Sadece yeni eklenen dosyaları ekle
+      existingAttachments.forEach(att => {
+        if (att.isNew && att.file) {
+          formData.append('files', att.file);
+        }
       });
 
       const res = await axios.post('/api/admin/tasks', formData, fileConfig);
@@ -130,14 +150,15 @@ const AdminPanel = () => {
       
       // Formu sıfırla
       setNewTask({ title: '', description: '', category: 'Personal', status: 'pending', dueDate: '', assignToUserId: '' });
-      setSelectedFiles([]); 
+      setSelectedFiles([]);
+      setExistingAttachments([]);
     } catch (error) {
       console.error('Görev oluşturma hatası:', error);
       alert('Görev oluşturulamadı');
     }
   };
 
-  // --- DÜZENLEME MODUNU AÇMA ---
+  // DÜZENLEME MODUNU AÇMA 
   const openEditModal = (task) => {
     setEditTask({
       _id: task._id,
@@ -154,10 +175,31 @@ const AdminPanel = () => {
     setShowEditModal(true);
   };
 
-  // --- DOSYA SİLME İŞLEMİ (Edit Modunda) ---
+  // Dosya input değişimi (Edit Modal için)
+  const handleEditFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    // Yeni dosyaları existingAttachments'a ekle
+    setExistingAttachments(prev => [
+      ...prev,
+      ...files.map(file => ({
+        file,
+        fileName: file.name,
+        fileSize: file.size,
+        fileUrl: URL.createObjectURL(file),
+        isNew: true
+      }))
+    ]);
+    setSelectedFiles([]); // input'u temizle
+    e.target.value = ''; // input'u sıfırla
+  };
+
+  // Dosya silme fonksiyonu (Edit Modal için)
   const handleRemoveExistingFile = (fileUrl) => {
-    setFilesToDelete(prev => [...prev, fileUrl]);
     setExistingAttachments(prev => prev.filter(att => att.fileUrl !== fileUrl));
+    // Eğer eski dosya ise backend'e bildir
+    const found = existingAttachments.find(att => att.fileUrl === fileUrl && !att.isNew);
+    if (found) setFilesToDelete(prev => [...prev, fileUrl]);
   };
 
   // --- GÖREV GÜNCELLEME (DOSYA DESTEKLİ) ---
@@ -177,9 +219,11 @@ const AdminPanel = () => {
       // Silinecek dosyaları bildir
       formData.append('deletedFiles', JSON.stringify(filesToDelete));
 
-      // Yeni eklenen dosyaları gönder
-      selectedFiles.forEach(file => {
-        formData.append('files', file);
+      // Sadece yeni eklenen dosyaları gönder
+      existingAttachments.forEach(att => {
+        if (att.isNew && att.file) {
+          formData.append('files', att.file);
+        }
       });
 
       const res = await axios.put(`/api/admin/tasks/${editTask._id}`, formData, fileConfig);
@@ -187,10 +231,9 @@ const AdminPanel = () => {
       setTasks(tasks.map(t => t._id === editTask._id ? res.data : t));
       setShowEditModal(false);
       setEditTask({ _id: '', title: '', description: '', category: 'Personal', status: 'pending', dueDate: '' });
-      setSelectedFiles([]);
       setFilesToDelete([]);
-      // Listeyi tazele (gerekirse)
-      // fetchData(); 
+      setExistingAttachments([]);
+      setSelectedFiles([]);
     } catch (error) {
       console.error('Güncelleme hatası:', error);
       alert('Görev güncellenemedi');
@@ -473,20 +516,55 @@ const AdminPanel = () => {
                 </select>
               </div>
 
-              {/* DOSYA YÜKLEME ALANI (YENİ) */}
+              {/* DOSYA YÖNETİMİ (MEVCUT/YENİ DOSYALAR) */}
+              {existingAttachments.length > 0 && (
+                <div className="space-y-2 border border-white/10 p-4 rounded-xl bg-black/10">
+                  <label className="block text-teal-200/50 text-[10px] font-bold uppercase tracking-widest mb-2">
+                    Attached Files
+                  </label>
+                  {existingAttachments.map((file, index) => (
+                    <div key={index} className="flex justify-between items-center bg-white/5 border border-white/10 p-2 rounded-lg group hover:border-teal-500/30 transition-all">
+                      <a
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                        title="Click to download/preview"
+                      >
+                        <span className="text-teal-400 text-lg">📄</span>
+                        <div className="flex flex-col">
+                          <span className="text-teal-100 text-xs font-medium truncate max-w-[200px] hover:underline hover:text-teal-300">
+                            {(() => {
+                              try { return decodeURIComponent(escape(file.fileName)); }
+                              catch (e) { return file.fileName; }
+                            })()}
+                          </span>
+                          <span className="text-[10px] text-gray-500">
+                            {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setExistingAttachments(prev => prev.filter(att => att.fileUrl !== file.fileUrl))}
+                        className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase px-2 py-1 bg-red-500/10 rounded-md transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* DOSYA YÜKLEME ALANI */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Attachments</label>
                 <input
                   type="file"
                   multiple
-                  onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                  onChange={handleCreateFileChange}
                   className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-500/20 file:text-teal-300 hover:file:bg-teal-500/30"
                 />
-                {selectedFiles.length > 0 && (
-                  <div className="mt-2 text-xs text-teal-300">
-                    {selectedFiles.length} file(s) selected
-                  </div>
-                )}
               </div>
             </div>
             
@@ -615,7 +693,7 @@ const AdminPanel = () => {
                 <input
                   type="file"
                   multiple
-                  onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                  onChange={handleEditFileChange}
                   className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-500/20 file:text-teal-300 hover:file:bg-teal-500/30"
                 />
               </div>
