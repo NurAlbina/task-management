@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Token oluştur (Requirement 8.2: Rol bilgisini token'a dahil eder) 
+// Token oluştur 
 const generateToken = (user) => {
   return jwt.sign(
     { 
@@ -14,7 +14,7 @@ const generateToken = (user) => {
   );
 };
 
-// Kullanıcı kayıt işlemi (Requirement 3 & 8.2) [cite: 23, 70]
+// Kullanıcı kayıt işlemi 
 exports.registerUser = async (req, res) => {
   const { name, email, password, role } = req.body; // Rolü body'den alabiliriz (Test için kolaylık)
 
@@ -25,12 +25,12 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Bu e-posta adresi zaten kullanılıyor' });
     }
 
-    // Yeni kullanıcıyı oluştur (Şifre User modelinde otomatik hashlenir) [cite: 20]
+    // Yeni kullanıcıyı oluştur (Şifre User modelinde otomatik hashlenir) 
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'user' // Eğer rol belirtilmemişse varsayılan 'user' olur [cite: 72]
+      role: role || 'user' // Eğer rol belirtilmemişse varsayılan 'user' olur 
     });
 
     if (user) {
@@ -49,14 +49,14 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// Kullanıcı giriş işlemi (Requirement 3 & 4) [cite: 23, 87]
+// Kullanıcı giriş işlemi 
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
 
-    // matchPassword metodu ile şifre kontrolü [cite: 20]
+    // matchPassword metodu ile şifre kontrolü
     if (user && (await user.matchPassword(password))) {
       res.json({
         _id: user._id,

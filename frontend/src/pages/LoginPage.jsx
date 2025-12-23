@@ -24,15 +24,14 @@ const LoginPage = () => {
       // Başarılı girişte JWT token'ı localStorage'a kaydet
       localStorage.setItem("token", response.data.token);
 
-      // --- ROL BAZLI YÖNLENDİRME (Requirement 8.2) ---
-      // Backend'den dönen rol bilgisini kontrol ediyoruz [cite: 70, 78]
+      // Backend'den dönen rol bilgisini kontrol ediyoruz 
       const userRole = response.data.role;
 
       if (userRole === "admin") {
         // Kullanıcı admin ise Admin Paneline yönlendir 
         navigate("/admin-panel");
       } else {
-        // Normal kullanıcı ise standart Dashboard'a yönlendir [cite: 72]
+        // Normal kullanıcı ise standart Dashboard'a yönlendir 
         navigate("/dashboard");
       }
       

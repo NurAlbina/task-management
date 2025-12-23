@@ -79,7 +79,7 @@ exports.updateTask = async (req, res) => {
       return res.status(401).json({ message: 'Bu göreve erişim yetkiniz yok' });
     }
 
-    // 1. SİLİNECEK DOSYALARI YÖNET
+    // SİLİNECEK DOSYALARI YÖNET
     // Frontend'den silinecek dosyaların fileUrl veya fileKey'i gelmeli
     if (req.body.deletedFiles) {
       const filesToDelete = JSON.parse(req.body.deletedFiles); // Örn: ["https://s3...", "https://s3..."]
@@ -99,7 +99,7 @@ exports.updateTask = async (req, res) => {
       }
     }
 
-    // 2. YENİ DOSYALARI EKLE (S3'e zaten yüklendi, veritabanına ekliyoruz)
+    // YENİ DOSYALARI EKLE (S3'e zaten yüklendi, veritabanına ekliyoruz)
     if (req.files && req.files.length > 0) {
       const newAttachments = req.files.map(file => ({
         fileName: file.originalname,
@@ -111,7 +111,7 @@ exports.updateTask = async (req, res) => {
       task.attachments = [...task.attachments, ...newAttachments];
     }
 
-    // 3. DİĞER ALANLARI GÜNCELLE
+    // DİĞER ALANLARI GÜNCELLE
     const { title, description, category, dueDate, status } = req.body;
     task.title = title || task.title;
     task.description = description || task.description;
@@ -159,8 +159,7 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-// --- ADMIN FONKSİYONLARI ---
-
+// ADMIN FONKSİYONLARI 
 exports.getAllTasks = async (req, res) => {
   try {
     const tasks = await Task.find()

@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// --- GENEL KORUMA: Giriş yapmış her kullanıcı için ---
+// Giriş yapmış her kullanıcı için koruma
 const protect = async (req, res, next) => {
   let token;
 
@@ -10,7 +10,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Veritabanından kullanıcıyı çekiyoruz (Rolü de otomatik gelir) [cite: 75]
+      // Veritabanından kullanıcıyı çekiyoruz (Rolü de otomatik gelir) 
       req.user = await User.findById(decoded.id).select('-password');
 
       next();
@@ -25,13 +25,13 @@ const protect = async (req, res, next) => {
   }
 };
 
-// --- ÖZEL KORUMA (Requirement 8.2): Sadece Adminler için --- 
+// Sadece Adminler için koruma 
 const admin = (req, res, next) => {
   // Kullanıcı varsa VE rolü 'admin' ise geçişe izin ver
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    // Admin değilse 403 (Forbidden) hatası döndür [cite: 83]
+    // Admin değilse 403 (Forbidden) hatası döndür
     res.status(403).json({ message: 'Erişim reddedildi: Bu alan sadece Admin yetkisine sahip kullanıcılara özeldir.' });
   }
 };

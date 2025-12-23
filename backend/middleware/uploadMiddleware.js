@@ -3,13 +3,13 @@ const s3 = require('../config/s3Config'); // S3 konfigürasyonunu içeri aktar
 const multerS3 = require('multer-s3');
 const path = require('path');
 
-// ... (Desteklenen dosya türleri ve boyutu aynı kalır) ...
+// Desteklenen dosya türleri
 const allowedMimeTypes = [
     'application/pdf',
     'image/png',
     'image/jpeg',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // xlsx
 ];
 
 // S3 Depolama Ayarı 
@@ -43,7 +43,7 @@ const upload = multer({
     storage: s3Storage, // s3Storage kullanılıyor
     fileFilter: fileFilter,
     limits: { 
-        fileSize: 10 * 1024 * 1024 // Maksimum dosya boyutu: 10 MB [cite: 55]
+        fileSize: 10 * 1024 * 1024 // Maksimum dosya boyutu: 10 MB 
     }
 });
 

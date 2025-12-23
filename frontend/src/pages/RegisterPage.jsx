@@ -22,21 +22,15 @@ const RegisterPage = () => {
     const validDomains = [
       'gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 
       'icloud.com', 'protonmail.com', 'yandex.com', 'mail.com',
-      // Türk domainleri
-      'edu.tr', 'gov.tr', 'com.tr', 'org.tr',
-      // Üniversite domainleri (genel)
-      '.edu', '.ac.uk'
     ];
     
     if (!emailRegex.test(email)) return false;
     
     const domain = email.split('@')[1]?.toLowerCase();
     if (!domain) return false;
-    
-    // Domain bilinen listede mi veya .edu/.gov içeriyor mu kontrol et
-    const isValidDomain = validDomains.some(valid => 
-      domain === valid || domain.endsWith('.' + valid) || domain.endsWith(valid)
-    );
+
+    // Mail bilinen sağlayıcılardan mı
+    const isValidDomain = domain && domain.includes('.');
     
     return isValidDomain;
   };
