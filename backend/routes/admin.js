@@ -1,39 +1,31 @@
 const express = require('express');
 const router = express.Router();
+
+// 1. Yeni oluşturduğumuz adminController'ı çağırıyoruz
+const adminController = require('../controllers/adminController'); 
 const { protect, admin } = require('../middleware/authMiddleware');
-const {
-  getAllTasks,
-  getAllUsers,
-  assignTask,
-  deleteAnyTask,
-  getAdminStats,
-  createTaskForUser,
-  updateAnyTask  
-} = require('../controllers/taskController');
+const upload = require('../middleware/uploadMiddleware'); // Dosya yükleme aracı
 
-// Tüm admin route'ları koruma altında
-router.use(protect);
-router.use(admin);
+// --- İstatistikler ---
+router.get('/stats', protect, admin, adminController.getStats);
 
-// İstatistikler
-router.get('/stats', getAdminStats);
+// --- Tüm Görevleri Getir ---
+router.get('/tasks', protect, admin, adminController.getAllTasks);
 
-// Tüm görevler
-router.get('/tasks', getAllTasks);
+// --- Tüm Kullanıcıları Getir ---
+router.get('/users', protect, admin, adminController.getAllUsers);
 
-// Tüm kullanıcılar
-router.get('/users', getAllUsers);
+// --- GÖREV OLUŞTURMA (Dosya Destekli - Requirement 8.1) ---
+// upload.array('files') middleware'i, frontend'den gelen dosyaları yakalar
+router.post('/tasks', protect, admin, upload.array('files', 5), adminController.createTask);
 
-// Görev ata
-router.put('/assign', assignTask);
+// --- GÖREV GÜNCELLEME (Dosya Destekli) ---
+router.put('/tasks/:id', protect, admin, upload.array('files', 5), adminController.updateTask);
 
-// Herhangi bir görevi güncelle 
-router.put('/tasks/:id', updateAnyTask);
+// --- Görev Silme ---
+router.delete('/tasks/:id', protect, admin, adminController.deleteTask);
 
-// Görev sil
-router.delete('/tasks/:id', deleteAnyTask);
-
-// Admin için görev oluştur 
-router.post('/tasks', createTaskForUser);
+// --- Görev Atama ---
+router.put('/assign', protect, admin, adminController.assignTask);
 
 module.exports = router;

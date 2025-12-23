@@ -7,11 +7,23 @@ const AdminPanel = () => {
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Seçim State'leri
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedUser, setSelectedUser] = useState('');
+  
+  // Modal Görünürlük State'leri
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
+
+  // --- DOSYA YÖNETİMİ İÇİN YENİ STATE'LER (Requirement 8.1) ---
+  const [selectedFiles, setSelectedFiles] = useState([]); // Yeni seçilen dosyalar
+  const [existingAttachments, setExistingAttachments] = useState([]); // Düzenlemede mevcut dosyalar
+  const [filesToDelete, setFilesToDelete] = useState([]); // Silinecek dosyalar listesi
+
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -20,7 +32,7 @@ const AdminPanel = () => {
     dueDate: '',
     assignToUserId: ''
   });
-  // const [selectedFiles, setSelectedFiles] = useState([]); // Şimdilik gitsin
+
   const [editTask, setEditTask] = useState({
     _id: '',
     title: '',
@@ -29,12 +41,12 @@ const AdminPanel = () => {
     status: 'pending',
     dueDate: ''
   });
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const config = { headers: { Authorization: `Bearer ${token}` } };
+  // Dosya gönderimi için özel config
+  const fileConfig = { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } };
 
   useEffect(() => {
     fetchData();
@@ -89,31 +101,43 @@ const AdminPanel = () => {
     }
   };
 
+  // --- YENİ GÖREV OLUŞTURMA (DOSYA DESTEKLİ) ---
   const handleCreateTask = async () => {
     if (!newTask.title || !newTask.assignToUserId) {
       alert('Başlık ve kullanıcı seçimi zorunludur');
       return;
     }
     try {
-      const res = await axios.post('/api/admin/tasks', {
-        title: newTask.title,
-        description: newTask.description,
-        category: newTask.category,
-        status: newTask.status,
-        dueDate: newTask.dueDate,
-        assignToUserId: newTask.assignToUserId
-      }, config);
+      // JSON yerine FormData kullanıyoruz
+      const formData = new FormData();
+      formData.append('title', newTask.title);
+      formData.append('description', newTask.description);
+      formData.append('category', newTask.category);
+      formData.append('status', newTask.status);
+      formData.append('dueDate', newTask.dueDate);
+      formData.append('assignToUserId', newTask.assignToUserId); // Admin için özel alan
+
+      // Dosyaları ekle
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const res = await axios.post('/api/admin/tasks', formData, fileConfig);
       
       setTasks([res.data, ...tasks]);
       setStats(prev => ({ ...prev, totalTasks: prev.totalTasks + 1 }));
       setShowCreateModal(false);
+      
+      // Formu sıfırla
       setNewTask({ title: '', description: '', category: 'Personal', status: 'pending', dueDate: '', assignToUserId: '' });
+      setSelectedFiles([]); 
     } catch (error) {
       console.error('Görev oluşturma hatası:', error);
       alert('Görev oluşturulamadı');
     }
   };
 
+  // --- DÜZENLEME MODUNU AÇMA ---
   const openEditModal = (task) => {
     setEditTask({
       _id: task._id,
@@ -123,27 +147,50 @@ const AdminPanel = () => {
       status: task.status,
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : ''
     });
+    // Mevcut dosyaları yükle
+    setExistingAttachments(task.attachments || []);
+    setFilesToDelete([]); // Silinecekler listesini sıfırla
+    setSelectedFiles([]); // Yeni eklenecekleri sıfırla
     setShowEditModal(true);
   };
 
+  // --- DOSYA SİLME İŞLEMİ (Edit Modunda) ---
+  const handleRemoveExistingFile = (fileUrl) => {
+    setFilesToDelete(prev => [...prev, fileUrl]);
+    setExistingAttachments(prev => prev.filter(att => att.fileUrl !== fileUrl));
+  };
+
+  // --- GÖREV GÜNCELLEME (DOSYA DESTEKLİ) ---
   const handleEditTask = async () => {
     if (!editTask.title) {
       alert('Başlık zorunludur');
       return;
     }
     try {
-      const res = await axios.put(`/api/admin/tasks/${editTask._id}`, {
-        title: editTask.title,
-        description: editTask.description,
-        category: editTask.category,
-        status: editTask.status,
-        dueDate: editTask.dueDate || null
-      }, config);
+      const formData = new FormData();
+      formData.append('title', editTask.title);
+      formData.append('description', editTask.description);
+      formData.append('category', editTask.category);
+      formData.append('status', editTask.status);
+      formData.append('dueDate', editTask.dueDate || '');
+
+      // Silinecek dosyaları bildir
+      formData.append('deletedFiles', JSON.stringify(filesToDelete));
+
+      // Yeni eklenen dosyaları gönder
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const res = await axios.put(`/api/admin/tasks/${editTask._id}`, formData, fileConfig);
       
       setTasks(tasks.map(t => t._id === editTask._id ? res.data : t));
       setShowEditModal(false);
       setEditTask({ _id: '', title: '', description: '', category: 'Personal', status: 'pending', dueDate: '' });
-      fetchData();
+      setSelectedFiles([]);
+      setFilesToDelete([]);
+      // Listeyi tazele (gerekirse)
+      // fetchData(); 
     } catch (error) {
       console.error('Güncelleme hatası:', error);
       alert('Görev güncellenemedi');
@@ -188,7 +235,7 @@ const AdminPanel = () => {
       </nav>
 
       <div className="container mx-auto px-6 py-10">
-        {/* İstatistik Kartları */}
+        {/* İstatistik Kartları (Aynı) */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-10">
           <div className="bg-[#112240] border border-white/10 rounded-2xl p-6">
             <p className="text-gray-400 text-sm">Total Tasks</p>
@@ -212,7 +259,7 @@ const AdminPanel = () => {
           </div>
         </div>
 
-        {/* Görev Listesi */}
+        {/* Görev Listesi (Tablo) */}
         <div className="bg-[#112240] border border-white/10 rounded-2xl p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-red-300">📋 All Tasks</h2>
@@ -267,7 +314,6 @@ const AdminPanel = () => {
                       <td className="py-4">
                         <div className="flex gap-2">
                           <button
-                            // Buton tıklanınca detay modalinin açılmasını engellemek için
                             onClick={(e) => { e.stopPropagation(); openEditModal(task); }} 
                             className="px-3 py-1.5 rounded-lg bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 border border-teal-500/30 text-xs font-medium transition-all"
                           >
@@ -296,7 +342,7 @@ const AdminPanel = () => {
         </div>
       </div>
 
-      {/* Assign Modal */}
+      {/* Assign Modal (Aynı) */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4">
@@ -337,13 +383,14 @@ const AdminPanel = () => {
         </div>
       )}
 
-      {/* Create Task Modal*/}
+      {/* --- CREATE TASK MODAL (GÜNCELLENMİŞ) --- */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4">
+          <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-white mb-4">Create Task for User</h3>
             
             <div className="space-y-4">
+              {/* Başlık */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Title *</label>
                 <input
@@ -355,6 +402,7 @@ const AdminPanel = () => {
                 />
               </div>
               
+              {/* Açıklama */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Description</label>
                 <textarea
@@ -366,6 +414,7 @@ const AdminPanel = () => {
                 />
               </div>
               
+              {/* Kategori ve Durum */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">Category</label>
@@ -396,6 +445,7 @@ const AdminPanel = () => {
                 </div>
               </div>
               
+              {/* Tarih */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Due Date</label>
                 <input
@@ -406,6 +456,7 @@ const AdminPanel = () => {
                 />
               </div>
 
+              {/* Kullanıcı Seçimi */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Assign to User *</label>
                 <select
@@ -420,6 +471,22 @@ const AdminPanel = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* DOSYA YÜKLEME ALANI (YENİ) */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Attachments</label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-500/20 file:text-teal-300 hover:file:bg-teal-500/30"
+                />
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 text-xs text-teal-300">
+                    {selectedFiles.length} file(s) selected
+                  </div>
+                )}
               </div>
             </div>
             
@@ -441,13 +508,14 @@ const AdminPanel = () => {
         </div>
       )}
 
-      {/* Edit Task Modal */}
+      {/* --- EDIT TASK MODAL (GÜNCELLENMİŞ) --- */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4">
+          <div className="bg-[#112240] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-white mb-4">Edit Task</h3>
             
             <div className="space-y-4">
+              {/* Başlık */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Title *</label>
                 <input
@@ -455,10 +523,10 @@ const AdminPanel = () => {
                   value={editTask.title}
                   onChange={(e) => setEditTask({...editTask, title: e.target.value})}
                   className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white"
-                  placeholder="Task title"
                 />
               </div>
               
+              {/* Açıklama */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Description</label>
                 <textarea
@@ -466,10 +534,10 @@ const AdminPanel = () => {
                   onChange={(e) => setEditTask({...editTask, description: e.target.value})}
                   className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white resize-none"
                   rows="3"
-                  placeholder="Task description"
                 />
               </div>
               
+              {/* Kategori ve Durum */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">Category</label>
@@ -500,6 +568,7 @@ const AdminPanel = () => {
                 </div>
               </div>
               
+              {/* Tarih */}
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Due Date</label>
                 <input
@@ -507,6 +576,47 @@ const AdminPanel = () => {
                   value={editTask.dueDate}
                   onChange={(e) => setEditTask({...editTask, dueDate: e.target.value})}
                   className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white"
+                />
+              </div>
+
+              {/* DOSYA YÖNETİMİ (MEVCUT DOSYALAR) */}
+              {existingAttachments.length > 0 && (
+                <div className="p-3 border border-white/10 rounded-xl bg-black/10">
+                  <label className="block text-gray-400 text-xs uppercase mb-2">Existing Files</label>
+                  <div className="space-y-2">
+                    {existingAttachments.map((file, index) => (
+                      <div key={index} className="flex justify-between items-center bg-white/5 p-2 rounded-lg">
+                        <a 
+                          href={file.fileUrl.startsWith('http') ? file.fileUrl : `http://localhost:5000${file.fileUrl}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-xs text-teal-300 truncate max-w-[150px] hover:underline"
+                        >
+                          {(() => {
+                            try { return decodeURIComponent(escape(file.fileName)); } 
+                            catch (e) { return file.fileName; }
+                          })()}
+                        </a>
+                        <button 
+                          onClick={() => handleRemoveExistingFile(file.fileUrl)}
+                          className="text-red-400 text-xs hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DOSYA YÜKLEME (YENİ DOSYALAR) */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Add New Attachments</label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-500/20 file:text-teal-300 hover:file:bg-teal-500/30"
                 />
               </div>
             </div>
@@ -529,10 +639,11 @@ const AdminPanel = () => {
         </div>
       )}
 
-      {/* Task Detail Modal */}
+      {/* Task Detail Modal (Aynı) */}
       {showDetailModal && selectedTaskDetail && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#112240] border border-white/10 rounded-2xl p-8 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            {/* Detay modal içeriği (Aynı kalacak) */}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-semibold text-white">{selectedTaskDetail.title}</h3>
@@ -540,7 +651,6 @@ const AdminPanel = () => {
             </div>
 
             <div className="space-y-6">
-              {/* Açıklama */}
               <div>
                 <p className="text-gray-400 text-sm mb-2">Description</p>
                 <p className="text-white bg-black/20 p-4 rounded-xl min-h-[100px]">
@@ -548,9 +658,9 @@ const AdminPanel = () => {
                 </p>
               </div>
 
-              {/* Bilgiler */}
+              {/* Diğer detaylar... */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                 <div>
                   <p className="text-gray-400 text-sm mb-2">Category</p>
                   <p className="text-teal-300 font-medium">{selectedTaskDetail.category}</p>
                 </div>
@@ -560,16 +670,16 @@ const AdminPanel = () => {
                     {selectedTaskDetail.status}
                   </span>
                 </div>
-                <div>
+                 <div>
                   <p className="text-gray-400 text-sm mb-2">Owner</p>
                   <div>
                     <p className="text-white">{selectedTaskDetail.userId?.name || 'Unknown'}</p>
                     <p className="text-gray-500 text-xs">{selectedTaskDetail.userId?.email}</p>
                   </div>
                 </div>
-                <div>
+                 <div>
                   <p className="text-gray-400 text-sm mb-2">Due Date</p>
-                  <p className="text-white">
+                   <p className="text-white">
                     {selectedTaskDetail.dueDate 
                       ? new Date(selectedTaskDetail.dueDate).toLocaleDateString('tr-TR')
                       : 'No due date'}
@@ -577,53 +687,37 @@ const AdminPanel = () => {
                 </div>
               </div>
 
-              {/* Timestamp */}
-              <div className="border-t border-white/10 pt-4">
-                <p className="text-gray-400 text-sm mb-3">Timeline</p>
-                <div className="space-y-2 text-sm">
-                  <p className="text-gray-400">
-                    Created: <span className="text-white">{new Date(selectedTaskDetail.createdAt).toLocaleDateString('tr-TR')}</span>
-                  </p>
-                  <p className="text-gray-400">
-                    Updated: <span className="text-white">{new Date(selectedTaskDetail.updatedAt).toLocaleDateString('tr-TR')}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Dosya eklentileri */}
+              {/* Dosya eklentileri (Düzeltilmiş Link Yapısı) */}
               {selectedTaskDetail.attachments && selectedTaskDetail.attachments.length > 0 && (
                 <div className="border-t border-white/10 pt-4">
                   <p className="text-gray-400 text-sm mb-3">Attachments ({selectedTaskDetail.attachments.length})</p>
                   <div className="space-y-2">
-                  {selectedTaskDetail.attachments.map((file, index) => (
-  <a
-    key={index}
-    // URL Kontrolü: Eğer bulut linkiyse direkt kullan, değilse localhost ekle
-    href={file.fileUrl.startsWith('http') ? file.fileUrl : `http://localhost:5000${file.fileUrl}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"
-  >
-    <span className="text-xl">📎</span>
-    <div className="flex-1 min-w-0">
-      {/* İsimdeki karakter bozukluğunu düzelten güvenli gösterim */}
-      <p className="text-white truncate text-sm">
-        {(() => {
-          try { return decodeURIComponent(escape(file.fileName)); } 
-          catch (e) { return file.fileName; }
-        })()}
-      </p>
-      <p className="text-gray-500 text-xs">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
-    </div>
-    <span className="text-teal-400 text-sm">↓</span>
-  </a>
-))}
+                    {selectedTaskDetail.attachments.map((file, index) => (
+                      <a
+                        key={index}
+                        href={file.fileUrl.startsWith('http') ? file.fileUrl : `http://localhost:5000${file.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-black/20 rounded-xl hover:bg-black/40 transition-all"
+                      >
+                        <span className="text-xl">📎</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white truncate text-sm">
+                            {(() => {
+                              try { return decodeURIComponent(escape(file.fileName)); } 
+                              catch (e) { return file.fileName; }
+                            })()}
+                          </p>
+                          <p className="text-gray-500 text-xs">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <span className="text-teal-400 text-sm">↓</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Kapama butonu */}
             <div className="flex gap-3 mt-8 pt-6 border-t border-white/10">
               <button
                 onClick={() => setShowDetailModal(false)}

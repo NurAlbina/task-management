@@ -261,9 +261,20 @@ exports.createTaskForUser = async (req, res) => {
     if (!targetUser) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
+
+    // 1. DOSYALARI HAZIRLA (Eksik olan kısım burasıydı)
+    let attachments = [];
+    if (req.files && req.files.length > 0) {
+      attachments = req.files.map(file => ({
+        fileName: file.originalname,
+        fileUrl: file.location, // S3 URL'si
+        fileKey: file.key,      // S3 Key (Silme işlemi için şart)
+        fileSize: file.size,
+        uploadDate: new Date()
+      }));
+    }
     
-    // Not: Admin panelinden dosya yükleme desteği şu an bu endpoint'te yok
-    // Eğer eklenecekse createTasks ile aynı mantık (req.files kullanımı) eklenmeli
+    // 2. Görevi Oluştur
     const task = await Task.create({
       userId: assignToUserId,
       title,
@@ -271,32 +282,70 @@ exports.createTaskForUser = async (req, res) => {
       category,
       status: status || 'pending',
       dueDate: dueDate || null,
-      dueTime: dueTime || null
+      dueTime: dueTime || null,
+      attachments: attachments // Dosyaları ekle
     });
     
     const populatedTask = await Task.findById(task._id).populate('userId', 'name email');
     res.status(201).json(populatedTask);
+
   } catch (error) {
     console.error('Create task for user error:', error);
     res.status(500).json({ message: 'Görev oluşturulamadı', error: error.message });
   }
 };
-
 exports.updateAnyTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    let task = await Task.findById(req.params.id);
     
     if (!task) {
       return res.status(404).json({ message: 'Görev bulunamadı' });
     }
+
+    // 1. SİLİNECEK DOSYALARI YÖNET (Frontend'den gelen deletedFiles listesi)
+    if (req.body.deletedFiles) {
+      try {
+        const filesToDelete = JSON.parse(req.body.deletedFiles);
+        for (const fileUrlToDelete of filesToDelete) {
+          const attachmentObj = task.attachments.find(att => att.fileUrl === fileUrlToDelete);
+          // S3'ten sil
+          if (attachmentObj && attachmentObj.fileKey) {
+             await deleteFileFromS3(attachmentObj.fileKey);
+          }
+          // Listeden çıkar
+          task.attachments = task.attachments.filter(att => att.fileUrl !== fileUrlToDelete);
+        }
+      } catch (e) {
+        console.error("Dosya silme listesi parse hatası:", e);
+      }
+    }
+
+    // 2. YENİ DOSYALARI EKLE
+    if (req.files && req.files.length > 0) {
+      const newAttachments = req.files.map(file => ({
+        fileName: file.originalname,
+        fileUrl: file.location, // S3 URL
+        fileKey: file.key,      // S3 Key
+        fileSize: file.size,
+        uploadDate: new Date()
+      }));
+      task.attachments = [...task.attachments, ...newAttachments];
+    }
     
-    const updatedTask = await Task.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    ).populate('userId', 'name email');
+    // 3. METİN ALANLARINI GÜNCELLE
+    const { title, description, category, status, dueDate } = req.body;
+    if(title) task.title = title;
+    if(description !== undefined) task.description = description;
+    if(category) task.category = category;
+    if(status) task.status = status;
+    if(dueDate) task.dueDate = dueDate;
+
+    // Kaydet ve Populate et
+    const updatedTask = await task.save();
+    const populatedTask = await Task.findById(updatedTask._id).populate('userId', 'name email');
     
-    res.json(updatedTask);
+    res.json(populatedTask);
+
   } catch (error) {
     console.error('Update any task error:', error);
     res.status(500).json({ message: 'Güncelleme başarısız', error: error.message });
