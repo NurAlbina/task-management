@@ -38,12 +38,12 @@ const TaskSchema = new mongoose.Schema({
     required: true
   },
 attachments: [{
-    fileName: { type: String, required: true }, // [cite: 62] - Orijinal Dosya Adı
-    fileUrl: { type: String, required: true },  //  - Erişim URL'si
-    fileKey: { type: String, required: true },  //  - S3'ten silmek için GEREKLİ (Storage Path)
-    fileSize: { type: Number, required: true }, // [cite: 65] - Dosya Boyutu
-    uploadDate: { type: Date, default: Date.now }, // [cite: 66] - Yükleme Tarihi
-    uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // [cite: 68] - Yükleyen Kullanıcı
+    fileName: { type: String, required: true }, // Orijinal Dosya Adı
+    fileUrl: { type: String, required: true },  //  Erişim URL'si
+    fileKey: { type: String, required: true },  //  S3'ten silmek için GEREKLİ (Storage Path)
+    fileSize: { type: Number, required: true }, // Dosya Boyutu
+    uploadDate: { type: Date, default: Date.now }, // Yükleme Tarihi
+    uploader: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // Yükleyen Kullanıcı
   }]
 }, { 
   timestamps: true // createdAt ve updatedAt otomatik eklenir

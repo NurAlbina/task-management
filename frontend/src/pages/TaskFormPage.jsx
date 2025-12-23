@@ -18,7 +18,7 @@ const TaskFormPage = () => {
   const [error, setError] = useState('');
   const [dateError, setDateError] = useState('');
 
-  // --- DOSYA YÖNETİMİ STATE'LERİ (Requirement 8.1) ---
+  // Dosya yönetimi state'leri
   const [selectedFiles, setSelectedFiles] = useState([]); // Yeni seçilen dosyalar
   const [existingAttachments, setExistingAttachments] = useState([]); // Sunucudan gelen mevcut dosyalar
   const [filesToDelete, setFilesToDelete] = useState([]); // Silinecek dosyaların listesi
@@ -94,15 +94,15 @@ const TaskFormPage = () => {
     setDateError(validation.message);
   };
 
-  // --- DOSYA SİLME FONKSİYONU ---
+  // Dosya silme fonksiyonu
   const handleRemoveExistingFile = (fileUrl) => {
-    // 1. Silinecek dosyanın yolunu listeye ekle (Backend bunu silecek)
+    // Silinecek dosyanın yolunu listeye ekle (Backend bunu silecek)
     setFilesToDelete(prev => [...prev, fileUrl]);
-    // 2. Ekranda görünen listeden hemen kaldır
+    // Ekranda görünen listeden hemen kaldır
     setExistingAttachments(prev => prev.filter(att => att.fileUrl !== fileUrl));
   };
 
-  // --- FORM SUBMIT (KAYDETME) ---
+  // form kaydetme
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -119,7 +119,7 @@ const TaskFormPage = () => {
     try {
       const token = localStorage.getItem('token');
 
-      // 1. JSON YERİNE FORMDATA OLUŞTURUYORUZ (Requirement 8.1)
+      // JSON YERİNE FORMDATA OLUŞTURUYORUZ 
       const formData = new FormData();
       formData.append('title', title);
       formData.append('description', description);
@@ -127,15 +127,15 @@ const TaskFormPage = () => {
       formData.append('dueDate', dueDate);
       formData.append('status', status);
 
-      // 2. Silinecek dosyaları ekle
+      // Silinecek dosyaları ekle
       formData.append('deletedFiles', JSON.stringify(filesToDelete));
 
-      // 3. Yeni seçilen dosyaları tek tek ekle
+      // Yeni seçilen dosyaları tek tek ekle
       selectedFiles.forEach((file) => {
         formData.append('files', file); 
       });
 
-      // 4. Axios Config (Multipart Header)
+      // Axios Config 
       const config = {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -244,9 +244,9 @@ const TaskFormPage = () => {
               )}
             </div>
 
-            {/* --- DOSYA YÖNETİM ALANI BAŞLANGIÇ --- */}
+            {/* Dosya yönetim alanı*/}
             
-            {/* 1. Mevcut Dosyalar Listesi (Sadece varsa göster) */}
+            {/* Mevcut Dosyalar Listesi (Sadece varsa göster) */}
             {existingAttachments.length > 0 && (
               <div className="space-y-2 border border-white/10 p-4 rounded-xl bg-black/10">
                 <label className="block text-teal-200/50 text-[10px] font-bold uppercase tracking-widest mb-2">
@@ -284,7 +284,7 @@ const TaskFormPage = () => {
               </div>
             )}
 
-            {/* 2. Yeni Dosya Yükleme Alanı */}
+            {/* Yeni Dosya Yükleme Alanı */}
             <div>
               <label className="block text-teal-200/80 text-sm mb-2">
                 New Attachments (PDF, PNG, JPG, DOCX - Max 10MB)
@@ -319,7 +319,7 @@ const TaskFormPage = () => {
                 </div>
               )}
             </div>
-            {/* --- DOSYA YÖNETİM ALANI BİTİŞ --- */}
+
 
             {/* Bitiş tarihi */}
             <div>
