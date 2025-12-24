@@ -27,7 +27,10 @@ const connectDB = async () => {
 };
 
 // Veritabanına bağlanmayı dene
-connectDB();
+// Eğer test modundaysak otomatik bağlanma, testi bekle
+if (process.env.NODE_ENV !== 'test') {
+    connectDB();
+}
 
 // Express sunucusunu başlat
 const app = express();

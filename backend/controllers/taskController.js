@@ -159,6 +159,31 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
+
+exports.getTaskStats = async (req, res) => {
+  try {
+    // Giriş yapan kullanıcının ID'si
+    const userId = req.user.id; 
+
+    // Örnek İstatistik Hesabı (MongoDB Aggregation ile daha şık yapılabilir ama şimdilik basit tutalım)
+    const totalTasks = await Task.countDocuments({ user: userId });
+    const pendingTasks = await Task.countDocuments({ user: userId, status: 'pending' }); // status alanın varsa
+    const completedTasks = await Task.countDocuments({ user: userId, status: 'completed' });
+    
+    // Eğer status alanı kullanmıyorsan sadece toplamı döndür:
+    res.status(200).json({
+      totalTasks,
+      pendingTasks,
+      completedTasks
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'İstatistikler alınırken hata oluştu' });
+  }
+};
+
+
 // ADMIN FONKSİYONLARI 
 exports.getAllTasks = async (req, res) => {
   try {

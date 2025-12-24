@@ -15,7 +15,6 @@ router.get('/tasks', protect, admin, adminController.getAllTasks);
 // --- Tüm Kullanıcıları Getir ---
 router.get('/users', protect, admin, adminController.getAllUsers);
 
-// --- GÖREV OLUŞTURMA (Dosya Destekli - Requirement 8.1) ---
 // upload.array('files') middleware'i, frontend'den gelen dosyaları yakalar
 router.post('/tasks', protect, admin, upload.array('files', 5), adminController.createTask);
 

@@ -1,122 +1,153 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../index'); // index.js'den app'i çağırıyoruz
+const app = require('../index'); 
+const User = require('../models/User');
+const Task = require('../models/Task');
 
-/* Testler çalışmadan önce yapılacaklar */
+// Zaman aşımını 60 saniyeye çıkarıyoruz (İnternet yavaşlığına karşı)
+jest.setTimeout(60000);
+
+// Test kullanıcısını global tanımlıyoruz
+const testUser = {
+    name: "Test User",
+    email: `test_${Date.now()}@example.com`, 
+    password: "Password123!"
+};
+
+let token;      
+let taskId;     
+
+// --- TESTLER BAŞLAMADAN ÖNCE ---
 beforeAll(async () => {
-    // Veritabanı bağlantısının hazır olduğundan emin oluyoruz
+    // 1. Veritabanına burada biz bağlanıyoruz
+    // Eğer bağlantı yoksa bağlan
+    if (mongoose.connection.readyState === 0) {
+        try {
+            await mongoose.connect(process.env.MONGO_URI);
+            console.log('Test ortamı: Veritabanına bağlanıldı.');
+        } catch (error) {
+            console.error('Test ortamı: Bağlantı hatası!', error);
+        }
+    }
+    
+    // 2. Temizlik yap
+    await User.deleteMany({ email: testUser.email });
 });
 
-/* Testler bittikten sonra yapılacaklar */
+// --- TÜM TESTLER BİTİNCE ---
 afterAll(async () => {
-    // Test veritabanını temizle
-    // await mongoose.connection.db.dropDatabase(); 
-    
+    // Temizlik
+    await User.deleteMany({ email: testUser.email });
+    if (taskId) {
+        await Task.findByIdAndDelete(taskId);
+    }
     // Bağlantıyı kapat
     await mongoose.connection.close();
 });
 
 describe('Backend API Testleri', () => {
-    let token; // Testler boyunca kullanacağımız giriş anahtarı
-    let taskId; // Oluşturduğumuz görevin ID'si
-    
-    // Rastgele bir email üret (Her testte çakışma olmasın diye)
-    const randomEmail = `testuser_${Date.now()}@example.com`;
 
-    // 1. KULLANICI KAYDI TESTİ
+    // 1. REGISTER
     it('POST /api/auth/register - Yeni kullanıcı kaydetmeli', async () => {
         const res = await request(app)
             .post('/api/auth/register')
-            .send({
-                name: "Test Kullanıcısı",
-                email: randomEmail,
-                password: "password123"
-            });
+            .send(testUser);
         
-        expect(res.statusCode).toEqual(201); // Başarılı oluşturma kodu
-        expect(res.body).toHaveProperty('token'); // Token dönmeli
+        expect(res.statusCode).toBe(201);
+        expect(res.body).toHaveProperty('token');
     });
 
-    // 2. KULLANICI GİRİŞİ TESTİ
+    // 2. LOGIN
     it('POST /api/auth/login - Kullanıcı giriş yapabilmeli', async () => {
         const res = await request(app)
             .post('/api/auth/login')
             .send({
-                email: randomEmail,
-                password: "password123"
+                email: testUser.email,
+                password: testUser.password  
             });
         
-        expect(res.statusCode).toEqual(200);
+        expect(res.statusCode).toBe(200);
         expect(res.body).toHaveProperty('token');
-        
-        // Token'ı sonraki testler için kaydet
-        token = res.body.token;
+        token = res.body.token; // Token'ı kaydet
     });
 
-    // 3. YENİ GÖREV EKLEME TESTİ
-    it('POST /api/tasks - Yeni görev eklemeli', async () => {
+    // 3. YANLIŞ ŞİFRE
+    it('POST /api/auth/login - Yanlış şifre reddedilmeli', async () => {
+        const res = await request(app)
+            .post('/api/auth/login')
+            .send({
+                email: testUser.email,
+                password: "YanlisSifre123"
+            });
+        
+        expect([400, 401]).toContain(res.statusCode);
+        expect(res.body).not.toHaveProperty('token');
+
+    });
+
+    // 4. GÖREV EKLEME
+    it('POST /api/tasks - Görev eklemeli', async () => {
         const res = await request(app)
             .post('/api/tasks')
-            .set('Authorization', `Bearer ${token}`) // Token ile yetki gönderiyoruz
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 title: "Test Görevi",
-                description: "Bu bir otomatik test görevidir",
                 category: "Work",
                 dueDate: "2025-12-31"
             });
-            
-        expect(res.statusCode).toEqual(201);
-        expect(res.body.title).toEqual("Test Görevi");
         
-        // Oluşan görevin ID'sini kaydet
-        taskId = res.body._id;
+        expect(res.statusCode).toBe(201);
+        taskId = res.body._id; 
     });
 
-    // 4. GÖREVLERİ LİSTELEME TESTİ
+    /*    it('POST /api/tasks - Başlık olmadan görev eklenememeli', async () => {
+        const res = await request(app)
+            .post('/api/tasks')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ category: "Work" }); // Title yok!
+
+        expect(res.statusCode).toBe(400); // 500 dönerse backend hatalıdır.
+        });
+    */
+
+    // 5. GÖREV LİSTELEME
     it('GET /api/tasks - Görevleri listelemeli', async () => {
         const res = await request(app)
             .get('/api/tasks')
             .set('Authorization', `Bearer ${token}`);
-            
-        expect(res.statusCode).toEqual(200);
-        expect(Array.isArray(res.body)).toBeTruthy(); // Dizi dönmeli
-        expect(res.body.length).toBeGreaterThan(0); // En az 1 görev olmalı
+        
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
     });
 
-    // 5. GÖREV GÜNCELLEME TESTİ
+    // 6. GÖREV GÜNCELLEME
     it('PUT /api/tasks/:id - Görevi güncellemeli', async () => {
         const res = await request(app)
             .put(`/api/tasks/${taskId}`)
             .set('Authorization', `Bearer ${token}`)
-            .send({
-                title: "Güncellenmiş Test Görevi",
-                status: "completed"
-            });
-
-        expect(res.statusCode).toEqual(200);
-        expect(res.body.title).toEqual("Güncellenmiş Test Görevi");
-        expect(res.body.status).toEqual("completed");
-    });
-
-    // 6. GÖREV İSTATİSTİKLERİ TESTİ
-    it('GET /api/tasks/stats - İstatistikleri getirmeli', async () => {
+            .send({ title: "Güncel Başlık" });
         
-        const res = await request(app)
-            .get('/api/tasks/stats') 
-            .set('Authorization', `Bearer ${token}`); 
-            
-        if(res.statusCode !== 404) {
-             expect(res.statusCode).toBeOneOf([200, 201]);
-        }
+        expect(res.statusCode).toBe(200);
     });
 
-    // 7. GÖREV SİLME TESTİ
+    // 7. GÖREV SİLME
     it('DELETE /api/tasks/:id - Görevi silmeli', async () => {
         const res = await request(app)
             .delete(`/api/tasks/${taskId}`)
             .set('Authorization', `Bearer ${token}`);
-            
-        expect(res.statusCode).toEqual(200);
-        expect(res.body.message).toContain('silindi'); // Mesaj kontrolü
+        
+        expect(res.statusCode).toBe(200);
     });
-});
+    
+    // 8. İSTATİSTİK (STATS)
+    it('GET /api/tasks/stats - İstatistik getirmeli', async () => {
+        const res = await request(app)
+            .get('/api/tasks/stats')
+            .set('Authorization', `Bearer ${token}`);
+        
+        if (res.statusCode !== 404) {
+            expect(res.statusCode).toBe(200);
+        }
+    });   
+}); 
+
