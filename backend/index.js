@@ -54,8 +54,17 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
+
 // Sunucuyu dinlemeye başla
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Sunucu ${PORT} portunda başarıyla başlatıldı.`);
-});
+
+// Sadece bu dosya doğrudan çalıştırılıyorsa sunucuyu başlat
+// Testler import ettiğinde sunucuyu başlatmayacak
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Sunucu ${PORT} portunda başarıyla başlatıldı.`);
+  });
+}
+
+// app'i dışarı aktar ki test dosyası kullanabilsin
+module.exports = app;
