@@ -17,10 +17,14 @@ const testUser = {
 let token;      
 let taskId;     
 
+let adminEmail;     // Admin email'i (Silmek için tutuyoruz)
+let adminToken;     // Admin token'ı
+let targetUserId;   // Görev atanacak kullanıcı ID'si
+let adminTaskId;    // Admin testi için oluşturulan ekstra görev ID'si
+
 // --- TESTLER BAŞLAMADAN ÖNCE ---
 beforeAll(async () => {
-    // 1. Veritabanına burada biz bağlanıyoruz
-    // Eğer bağlantı yoksa bağlan
+    // Veritabanı bağlantısı
     if (mongoose.connection.readyState === 0) {
         try {
             await mongoose.connect(process.env.MONGO_URI);
@@ -30,19 +34,35 @@ beforeAll(async () => {
         }
     }
     
-    // 2. Temizlik yap
+    // Temizlik: Başlamadan önce olası kalıntıları sil
     await User.deleteMany({ email: testUser.email });
 });
 
-// --- TÜM TESTLER BİTİNCE ---
+// --- TÜM TESTLER BİTİNCE (TEMİZLİK ZAMANI) ---
 afterAll(async () => {
-    // Temizlik
+    console.log("🧹 Test sonrası temizlik yapılıyor...");
+    
+    // 1. Normal Test Kullanıcısını Sil
     await User.deleteMany({ email: testUser.email });
+    
+    // 2. Admin Kullanıcısını Sil (Eğer oluşturulduysa)
+    if (adminEmail) {
+        await User.deleteMany({ email: adminEmail });
+    }
+
+    // 3. Normal Görevi Sil
     if (taskId) {
         await Task.findByIdAndDelete(taskId);
     }
+
+    // 4. Admin Testi İçin Oluşturulan Görevi Sil
+    if (adminTaskId) {
+        await Task.findByIdAndDelete(adminTaskId);
+    }
+
     // Bağlantıyı kapat
     await mongoose.connection.close();
+    console.log("✨ Temizlik tamamlandı.");
 });
 
 describe('Backend API Testleri', () => {
@@ -149,5 +169,91 @@ describe('Backend API Testleri', () => {
             expect(res.statusCode).toBe(200);
         }
     });   
+
+    // ==========================================
+    // 9. ADMIN TESTLERİ 
+    // ==========================================
+    
+
+    it('SETUP: Admin Kullanıcısı Oluşturma', async () => {
+        const adminData = {
+            name: "Admin Tester",
+            email: `admin_${Date.now()}@test.com`,
+            password: "AdminPass123!"
+        };
+        
+        adminEmail = adminData.email;
+
+        // Kayıt
+        await request(app).post('/api/auth/register').send(adminData);
+
+        // ID'yi veritabanından bul
+        const createdUser = await User.findOne({ email: adminData.email });
+        const newAdminId = createdUser._id;
+
+        // Rolü admin yap
+        await User.findByIdAndUpdate(newAdminId, { role: 'admin' });
+
+        // Admin girişi
+        const res = await request(app).post('/api/auth/login').send({
+            email: adminData.email,
+            password: adminData.password
+        });
+        
+        expect(res.statusCode).toBe(200);
+        adminToken = res.body.token;
+
+        // Normal kullanıcı ID'sini bul
+        const u = await User.findOne({ email: testUser.email });
+        targetUserId = u._id;
+    });
+
+
+    // 9.1 TÜM KULLANICILARI GETİR
+    it('GET /api/admin/users - Admin tüm kullanıcıları görebilmeli', async () => {
+        const res = await request(app)
+            .get('/api/admin/users')
+            .set('Authorization', `Bearer ${adminToken}`);
+        
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThanOrEqual(2);
+    });
+
+
+    // 9.2 GÖREV ATAMA (ASSIGN TASK)
+    it('PUT /api/admin/assign - Admin bir görevi başka kullanıcıya atayabilmeli', async () => {
+        // Yeni bir görev oluştur (Silinmemesi için yeni yapıyoruz)
+        const newTaskRes = await request(app)
+            .post('/api/tasks')
+            .set('Authorization', `Bearer ${token}`) 
+            .send({
+                title: "Admin Tarafından Atanacak Görev",
+                category: "Work"
+            });
+        
+        adminTaskId = newTaskRes.body._id; 
+
+        // Atama yap
+        const res = await request(app)
+            .put('/api/admin/assign')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({
+                taskId: adminTaskId, 
+                userId: targetUserId 
+            });
+        
+        expect(res.statusCode).toBe(200);
+    });
+
+
+    // 9.3 YETKİSİZ ERİŞİM TESTİ (Negatif Test)
+    it('GET /api/admin/users - Normal kullanıcı admin sayfasına girememeli', async () => {
+        const res = await request(app)
+            .get('/api/admin/users')
+            .set('Authorization', `Bearer ${token}`);
+        
+        expect([401, 403]).toContain(res.statusCode);
+    });
 }); 
 
