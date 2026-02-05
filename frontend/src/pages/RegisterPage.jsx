@@ -156,19 +156,19 @@ const RegisterPage = () => {
             {/* Şifre gereksinimleri göstergesi */}
             {password && (
               <div className="mt-2 p-3 bg-gray-800/50 rounded-lg">
-                <p className="text-gray-300 text-sm mb-2">Şifre Gereksinimleri:</p>
+                <p className="text-gray-300 text-sm mb-2">Password Requirements:</p>
                 <ul className="space-y-1 text-sm">
                   <li className={passwordChecks.minLength ? 'text-green-400' : 'text-red-400'}>
-                    {passwordChecks.minLength ? '✅' : '❌'} En az 6 karakter
+                    {passwordChecks.minLength ? '✅' : '❌'} At least 6 characters
                   </li>
                   <li className={passwordChecks.hasUppercase ? 'text-green-400' : 'text-red-400'}>
-                    {passwordChecks.hasUppercase ? '✅' : '❌'} En az 1 büyük harf
+                    {passwordChecks.hasUppercase ? '✅' : '❌'} At least 1 uppercase letter
                   </li>
                   <li className={passwordChecks.hasNumber ? 'text-green-400' : 'text-red-400'}>
-                    {passwordChecks.hasNumber ? '✅' : '❌'} En az 1 rakam
+                    {passwordChecks.hasNumber ? '✅' : '❌'} At least 1 number
                   </li>
                   <li className={passwordChecks.hasSpecial ? 'text-green-400' : 'text-red-400'}>
-                    {passwordChecks.hasSpecial ? '✅' : '❌'} En az 1 özel karakter (!@#$%^&*)
+                    {passwordChecks.hasSpecial ? '✅' : '❌'} At least 1 special character (!@#$%^&*)
                   </li>
                 </ul>
               </div>

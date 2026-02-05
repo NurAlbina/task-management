@@ -10,16 +10,16 @@ const {
   getTaskStats
 } = require('../controllers/taskController');
 
-// --- TÜM ROTLARI KORUMAYA AL (Requirement 8.2) ---
+// TÜM ROTLARI KORUMAYA AL 
 router.use(protect);
 
 // 1. İstatistikleri getir
-router.get('/stats', getTaskStats); // <--- 2. BURAYA EKLE
+router.get('/stats', getTaskStats);
 
 // 2. Tüm görevleri getir
 router.get('/', getTasks);
 
-// 3. Yeni görev ekle (Requirement 8.1: Çoklu dosya desteği - max 5)
+// 3. Yeni görev ekle 
 // 'files' ismi frontend'deki FormData ile aynı olmalıdır.
 router.post('/', upload.array('files', 5), createTask);
 

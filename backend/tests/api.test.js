@@ -165,9 +165,8 @@ describe('Backend API Testleri', () => {
             .get('/api/tasks/stats')
             .set('Authorization', `Bearer ${token}`);
         
-        if (res.statusCode !== 404) {
-            expect(res.statusCode).toBe(200);
-        }
+        expect(res.statusCode).toBe(200);
+
     });   
 
     // ==========================================
