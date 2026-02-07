@@ -125,6 +125,13 @@ This project was developed as a collaborative team effort.
 * [Sevgi Yaren Özdemir](https://github.com/sozdemir53)
 * [Zehra Gül Özdemir](https://github.com/zehrose)
 * [Nur Albina Özdil](https://github.com/NurAlbina)
+* ## 👩‍💻 My Key Contributions (NurAlbina)
+As a core developer of this team project, I designed and implemented the following critical modules:
+
+* **Role-Based Authorization (RBAC):** Built the security layer using JWT and middleware to separate Admin/User privileges. (Commit: `FEAT: Role-based authorization system`)
+* **Admin Dashboard:** Developed the admin interface for managing users and viewing system statistics. (Commit: `FEAT: Admin Panel UI`)
+* **File Management Infrastructure:** Implemented the backend logic for file uploads using AWS S3 and Multer. (Commit: `Backend file upload infrastructure`)
+* **Secure Routing:** Created the `ProtectedRoute` component to secure application routes. (Commit: `FIX: Korumalı rota`)
 
 ## License
 This project is licensed under the MIT License.
